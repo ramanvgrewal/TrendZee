@@ -1,0 +1,33 @@
+# Node
+node_modules/
+dist/
+.output/
+.lovable/
+.tanstack/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+.env.*
+
+# Java / Maven
+target/
+*.jar
+*.war
+*.ear
+*.class
+.mvn/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
