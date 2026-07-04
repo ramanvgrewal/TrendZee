@@ -293,13 +293,23 @@ public class ProductEnrichmentService {
             Integer selling = p.getMainPrice() != null ? Integer.valueOf(p.getMainPrice().intValue()) : null;
             Integer mrp     = p.getOriginalPrice() != null ? Integer.valueOf(p.getOriginalPrice().intValue()) : selling;
 
+            // Fall back to the signal's original post media URL when the scraper
+            // could not fetch a product image (e.g. gated/loading-screen sites).
+            String imageUrl = p.getImageUrl();
+            if (imageUrl == null || imageUrl.isBlank()) {
+                imageUrl = signal.getMediaUrl();
+                if (imageUrl != null && !imageUrl.isBlank()) {
+                    log.info("[UNDERDOG] Image scrape failed for '{}' — falling back to signal mediaUrl", url);
+                }
+            }
+
             return Trend.ProductDetail.builder()
                     .brandName(signal.getAuthorUsername())
                     .title(p.getProductName())
                     .price(selling)
                     .originalPrice(mrp)
                     .shopUrl(p.getProductUrl())
-                    .imageUrl(p.getImageUrl())
+                    .imageUrl(imageUrl)
                     .codAvailable(true)
                     .build();
         } catch (Exception e) {

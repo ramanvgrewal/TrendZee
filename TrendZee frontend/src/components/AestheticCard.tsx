@@ -34,7 +34,7 @@ export function AestheticCard({ aesthetic, index = 0 }: { aesthetic: Aesthetic; 
           <img
             src={aesthetic.heroImage}
             alt={aesthetic.name}
-            className="h-full w-full object-contain transition-transform duration-[1400ms] group-hover:scale-110"
+            className="h-full w-full object-cover object-center transition-transform duration-[1400ms] group-hover:scale-110"
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />

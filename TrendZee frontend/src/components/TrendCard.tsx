@@ -43,13 +43,13 @@ function ProductBlock({
 
   const content = (
     <>
-      <div className="relative aspect-square overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden bg-white/[0.03]">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
             alt={product.title}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-white/[0.04] text-xs text-white/35">

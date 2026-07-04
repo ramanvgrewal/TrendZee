@@ -1,5 +1,3 @@
-import { buildCategoryFilter } from "@/lib/categories";
-import { getMongoDb } from "@/lib/mongodb.server";
 import type { ProductMatch, SignalProduct, Trend } from "@/lib/mock-data";
 
 type StoreKey = "underdog" | "amazon" | "flipkart";
@@ -143,54 +141,26 @@ function mapTrend(document: RawDocument): Trend {
 }
 
 export async function getTrendsByCategory(categoryId = "streetwear"): Promise<Trend[]> {
-  const filter = buildCategoryFilter(categoryId);
-  if (Object.keys(filter).length === 0) return [];
-
-  const db = await getMongoDb();
-
-  const documents = await (
-    db as {
-      collection: (name: string) => {
-        find: (
-          filter: RawDocument,
-          options: RawDocument,
-        ) => { toArray: () => Promise<RawDocument[]> };
-      };
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
+  const url = `${backendUrl}/api/v2/trends?category=${categoryId}`;
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`[TrendZY] Failed to fetch trends from backend: ${response.status} ${response.statusText}`);
+      return [];
     }
-  )
-    .collection("trends")
-    .find(filter, {
-      projection: {
-        trendName: 1,
-        name: 1,
-        aestheticId: 1,
-        category: 1,
-        subcategory: 1,
-        trendScore: 1,
-        tier: 1,
-        vibeTags: 1,
-        aiBrandNames: 1,
-        whyTrending: 1,
-        aiSummary: 1,
-        indiaRelevanceNote: 1,
-        indiaRelevant: 1,
-        signalProducts: 1,
-        totalSignals: 1,
-        enrichmentStatus: 1,
-        estimatedPrice: 1,
-        lastUpdatedAt: 1,
-        updatedAt: 1,
-        createdAt: 1,
-      },
-      sort: { trendScore: -1, updatedAt: -1 },
-    })
-    .toArray();
+    
+    const documents = await response.json();
+    const trends = documents.map(mapTrend).filter(hasCompleteTriad);
 
-  const trends = documents.map(mapTrend).filter(hasCompleteTriad);
+    console.info(
+      `[TrendZY] fetch(${url}) returned ${documents.length} docs; ${trends.length} have complete underdog/amazon/flipkart links with images.`,
+    );
 
-  console.info(
-    `[TrendZY] trends.find(${JSON.stringify(filter)}) returned ${documents.length} docs; ${trends.length} have complete underdog/amazon/flipkart links with images.`,
-  );
-
-  return trends;
+    return trends;
+  } catch (error) {
+    console.error(`[TrendZY] Error fetching trends from backend:`, error);
+    return [];
+  }
 }

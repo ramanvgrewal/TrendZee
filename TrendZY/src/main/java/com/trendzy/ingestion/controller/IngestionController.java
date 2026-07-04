@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/v2/ingestion")
@@ -20,9 +21,22 @@ public class IngestionController {
 
     private final SignalIngestionService ingestionService;
 
+    @Value("${INGEST_AUTH_CODE:}")
+    private String ingestAuthCode;
+
     @PostMapping("/trigger")
     public ResponseEntity<?> triggerIngestion(
-            @RequestParam(defaultValue = "STREETWEAR") String category) {
+            @RequestParam(defaultValue = "STREETWEAR") String category,
+            @RequestHeader(value = "X-Ingest-Code", defaultValue = "") String authCode) {
+
+        // ── Validate Auth Code ──
+        if (!ingestAuthCode.isEmpty() && !ingestAuthCode.equals(authCode)) {
+            log.warn("[CTRL] 🚨 Unauthorized ingestion attempt with code: {}", authCode);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "status", "UNAUTHORIZED",
+                    "message", "Invalid or missing X-Ingest-Code header"
+            ));
+        }
 
         // ── Validate category ──
         Category cat;
