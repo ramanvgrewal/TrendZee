@@ -23,11 +23,10 @@ public class TrendController {
         
         log.info("[CTRL] Fetching trends for category: {}", category);
         
-        // Build regex pattern matching the frontend behavior: ^(streetwear|STREETWEAR|Streetwear)$
-        String pattern = "^(" + category + "|" + category.toUpperCase() + "|" + 
-                         category.substring(0, 1).toUpperCase() + category.substring(1).toLowerCase() + ")$";
+        // Normalize to uppercase to match the values stored by the AI worker
+        String normalized = category.trim().toUpperCase();
         
-        List<Trend> trends = trendRepository.findByCategoryAndAestheticId(pattern);
+        List<Trend> trends = trendRepository.findByCategory(normalized);
         
         // The frontend expects the JSON matching the raw document, which the Spring Data REST serialization covers nicely.
         return ResponseEntity.ok(trends);

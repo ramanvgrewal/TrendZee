@@ -62,6 +62,7 @@ public class ProductEnrichmentService {
     private static final Map<String, List<String>> CATEGORY_KEYWORDS = Map.of(
             "SNEAKERS",    List.of("shoe", "sneaker", "kicks", "trainer", "footwear", "jordan", "yeezy", "dunk", "air max", "sports shoe"),
             "STREETWEAR",  List.of("tee", "t-shirt", "hoodie", "jacket", "pants", "shirt", "co-ord", "cargo", "oversized"),
+            "SPORTSWEAR",  List.of("gym", "activewear", "sports", "compression", "jersey", "tracksuit", "shorts", "athletic"),
             "WATCHES",     List.of("watch", "timepiece", "chronograph", "wristwatch"),
             "ACCESSORIES", List.of("bag", "wallet", "belt", "chain", "ring", "bracelet", "cap", "sunglasses")
     );
@@ -70,6 +71,7 @@ public class ProductEnrichmentService {
     private static final Map<String, String> CATEGORY_SEARCH_SUFFIX = Map.of(
             "SNEAKERS",    "shoes",
             "STREETWEAR",  "clothing",
+            "SPORTSWEAR",  "activewear",
             "WATCHES",     "watch",
             "ACCESSORIES", "accessories"
     );
@@ -180,6 +182,10 @@ public class ProductEnrichmentService {
                 .amazon(amazon)
                 .flipkart(flipkart)
                 .build());
+
+        if (underdog != null && underdog.getCurrency() != null) {
+            trend.setCurrency(underdog.getCurrency());
+        }
 
         // ── Status reflects actual coverage (max 3 pieces) ──
         int totalPieces = 0;
@@ -308,6 +314,7 @@ public class ProductEnrichmentService {
                     .title(p.getProductName())
                     .price(selling)
                     .originalPrice(mrp)
+                    .currency(p.getCurrency() != null ? p.getCurrency() : "Rs.")
                     .shopUrl(p.getProductUrl())
                     .imageUrl(imageUrl)
                     .codAvailable(true)

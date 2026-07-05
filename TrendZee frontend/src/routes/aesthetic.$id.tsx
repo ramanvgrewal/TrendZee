@@ -32,7 +32,7 @@ export const Route = createFileRoute("/aesthetic/$id")({
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
-          { title: `${loaderData.aesthetic.name} — TrendZY` },
+          { title: `${loaderData.aesthetic.name} — TrendXee` },
           { name: "description", content: loaderData.aesthetic.description },
         ]
       : [],

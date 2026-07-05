@@ -42,17 +42,35 @@ function Index() {
           </h1>
 
           <p className="max-w-2xl text-lg text-white/60">
-            TrendZY is the AI-powered feed reading the internet&apos;s style pulse —
+            TrendXee is the AI-powered feed reading the internet&apos;s style pulse —
             we cluster Reels, TikToks and creator drops into aesthetic movements
             and hand you the underdog fit before the algorithm does.
           </p>
 
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <button className="group flex items-center gap-2 rounded-full aesthetic-gradient px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.02]">
+          {/* Creative TrendXee.com Logo */}
+          <div className="relative group cursor-pointer mt-4 mb-2">
+            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-500 opacity-25 blur transition duration-1000 group-hover:opacity-75 group-hover:duration-200" />
+            <div className="relative flex items-center gap-2 rounded-xl bg-black/50 px-4 py-2 ring-1 ring-white/10 backdrop-blur-xl">
+              <Sparkles className="h-5 w-5 text-emerald-400 animate-pulse" />
+              <span className="font-display text-2xl font-black tracking-tight text-white">
+                Trend<span className="text-emerald-400">Xee</span>.com
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link
+              to="/aesthetic/$id"
+              params={{ id: "streetwear" }}
+              className="group flex items-center gap-2 rounded-full aesthetic-gradient px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
+            >
               Explore aesthetics
               <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </button>
-            <button className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+            </Link>
+            <button
+              onClick={() => alert("cool brotha cool 🤫 we keep the sauce secret")}
+              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+            >
               How the engine works
             </button>
           </div>
@@ -160,7 +178,7 @@ function Index() {
 
       <footer className="border-t border-white/5">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-8 text-xs text-white/40">
-          <span>© 2026 TrendZY · AI trend intelligence</span>
+          <span>© 2026 TrendXee · AI trend intelligence</span>
           <span className="font-mono">v0.9.4-beta</span>
         </div>
       </footer>

@@ -49,9 +49,23 @@ public class InstagramExploreClient {
                     "streetfashionindia", "hypebeastindia", "limiteddropindia", "capsulecollectionindia",
                     "dropstodayindia", "boxyfitindia", "heavyweighttee", "frenchterryindia", "puffprint", "acidwashindia"),
 
-            "CRICKETWEAR", List.of("cricketmerchindia", "cricketapparelindia", "homegrownsportsindia",
-                    "cricketstreetwear", "gullycricketstyle", "activewearindia", "sportsleisureindia",
-                    "cricketfashionindia", "teamindiastyle", "cricketlifestyle"),
+            "SPORTSWEAR", List.of(
+                    // Core Brand Indicators (Dodges the influencer selfies)
+                    "gymwearindia",
+                    "activewearindia",
+                    "gymwearbrandindia",
+                    "activewearbrandindia",
+
+                    // The Gen Z / Aesthetic terms
+                    "athleisureindia",         // Much higher signal than sportsleisure
+                    "athleisurewearindia",
+                    "homegrowngymwear",        // Forces the indie/D2C filter
+                    "homegrownactivewear",
+
+                    // Specific apparel types D2C brands push
+                    "pumpcoverindia",          // Massive Gen Z gym trend (oversized tees for gym)
+                    "compressionwearindia"
+            ),
 
             "ANIMEWEAR", List.of("animestreetwearindia", "animeclothingindia", "animemerchindia",
                     "animedropindia", "weebmerchindia", "otakufashionindia", "animeapparelindia",
@@ -59,12 +73,7 @@ public class InstagramExploreClient {
 
             "SNEAKERS", List.of("sneakerbrandindia", "homegrownsneakers", "indiansneakerbrand",
                     "sneakercommunityindia", "homegrownkicks", "sneakersindia", "sneakerdropindia",
-                    "solecollectorindia", "sneakerboutiqueindia", "kicksofindia"),
-
-            "TECHWEAR", List.of("devmerchindia", "codingtshirtsindia", "geekmerchindia",
-                    "programmermerchindia", "coderteesindia", "techstartupmerch",
-                    "developerclothing", "codingmerchindia", "softwaremerch", "devteesindia",
-                    "programmertees")
+                    "solecollectorindia", "sneakerboutiqueindia", "kicksofindia")
     );
 
     // ── URL Patterns ─────────────────────────────────────────────────────────

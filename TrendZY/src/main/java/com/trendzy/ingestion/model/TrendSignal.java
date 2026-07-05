@@ -36,6 +36,9 @@ public class TrendSignal {
 
     @Indexed(unique = true)
     private String sourceUrl;
+    @Builder.Default
+    private String currency = "Rs.";
+    private Double price;
     private String rawText;
 
     @Builder.Default

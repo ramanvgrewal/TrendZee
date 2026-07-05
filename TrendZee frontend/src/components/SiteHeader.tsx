@@ -13,7 +13,7 @@ export function SiteHeader() {
             </div>
           </div>
           <div className="font-display text-xl font-bold tracking-tight text-white">
-            trend<span className="text-gradient">zy</span>
+            trend<span className="text-gradient">xee</span>
           </div>
         </Link>
 

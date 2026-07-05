@@ -13,10 +13,8 @@ public interface TrendRepository extends MongoRepository<Trend, String> {
     @Query("{ '$or': [{'enrichmentStatus': 'PENDING'}, {'enrichmentStatus': null}], 'active': true }")
     List<Trend> findPendingEnrichment();
 
-    // Replicate the frontend's legacy $or logic for category matching
-    @Query(value = "{ '$or': [ " +
-           "{ 'category': { $regex: ?0, $options: 'i' } }, " +
-           "{ 'aestheticId': { $regex: ?0, $options: 'i' } } ] }",
+    // Exact match on category field (values are stored uppercase, e.g. "STREETWEAR")
+    @Query(value = "{ 'category': ?0 }",
            sort = "{ 'trendScore': -1, 'lastUpdatedAt': -1 }")
-    List<Trend> findByCategoryAndAestheticId(String categoryRegex);
+    List<Trend> findByCategory(String category);
 }

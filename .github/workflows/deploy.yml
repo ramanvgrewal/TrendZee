@@ -1,0 +1,85 @@
+name: Deploy TrendZY to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # This adds a manual "Run" button in GitHub just in case!
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # This is the magic permission that allows pushing to GHCR
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./TrendZY
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/trendzy-backend:latest
+
+      - name: Build and push AI Worker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./trendzy-ai-worker
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/trendzy-ai-worker:latest
+
+      - name: Deploy to EC2 Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p ~/trendxee
+            cd ~/trendxee
+            
+            # 📥 1. Automatically download the latest compose file from your GitHub!
+            curl -O https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.yml
+            
+            # 🔐 2. Dynamically construct the .env file
+            cat > .env << 'ENVEOF'
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+            MONGODB_DB_NAME=${{ secrets.MONGODB_DB_NAME }}
+            MONGO_URI=${{ secrets.MONGODB_URI }}
+            
+            KAFKA_BROKERS=kafka:29092
+            KAFKA_BROKER=kafka:29092
+            KAFKA_TOPIC=raw-signals-topic
+            KAFKA_GROUP_ID=ai-trend-cluster-group
+            KAFKA_AUTO_OFFSET_RESET=earliest
+            
+            BACKEND_PORT=8080
+            FRONTEND_PORT=8081
+            
+            GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+            GROQ_MODEL=llama-3.3-70b-versatile
+            LOG_LEVEL=INFO
+            INGEST_AUTH_CODE=${{ secrets.INGEST_AUTH_CODE }}
+            ENVEOF
+            
+            # 🐳 3. Pull and run the images
+            echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            sudo docker pull ghcr.io/${{ github.repository_owner }}/trendzy-backend:latest
+            sudo docker pull ghcr.io/${{ github.repository_owner }}/trendzy-ai-worker:latest
+            
+            sudo docker-compose down
+            sudo docker-compose up -d
+            sudo docker image prune -f

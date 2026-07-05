@@ -107,9 +107,9 @@ def upsert_trend_document(
 ) -> dict[str, Any]:
     name = _normalize_name(_safe_string(trend_payload.get("name")))
 
-    # Perform case-insensitive search by name since we removed slug
+    # Perform case-insensitive search by name scoped to category
     name_regex = re.compile(f"^{re.escape(name)}$", re.IGNORECASE)
-    existing = trends.find_one({"name": name_regex}, {"_id": 1, "supportingSignals": 1})
+    existing = trends.find_one({"name": name_regex, "category": category}, {"_id": 1, "supportingSignals": 1})
     
     supporting_signals = _safe_signal_object_ids(
         existing.get("supportingSignals", []) if isinstance(existing, dict) else [],
@@ -161,7 +161,7 @@ def upsert_trend_document(
     }
 
     return trends.find_one_and_update(
-        {"name": name_regex},
+        {"name": name_regex, "category": category},
         update_document,
         upsert=True,
         return_document=ReturnDocument.AFTER,

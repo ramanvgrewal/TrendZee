@@ -111,12 +111,22 @@ public class GenericParser {
 
         Double price = null;
         Double originalPrice = null;
+        String currency = "Rs.";
         JsonNode offers = node.path("offers");
         if (offers.isMissingNode() && node.has("offer")) offers = node.get("offer");
 
         if (!offers.isMissingNode()) {
             // Handle single offer or AggregateOffer or first from array
             JsonNode offer = offers.isArray() && !offers.isEmpty() ? offers.get(0) : offers;
+            
+            if (offer.has("priceCurrency")) {
+                String ccy = offer.path("priceCurrency").asText("").toUpperCase();
+                if ("USD".equals(ccy)) currency = "$";
+                else if ("EUR".equals(ccy)) currency = "€";
+                else if ("GBP".equals(ccy)) currency = "£";
+                else if ("INR".equals(ccy)) currency = "Rs.";
+            }
+            
             price = parsePrice(offer.path("price").asText(null));
             if (price == null) price = parsePrice(offer.path("lowPrice").asText(null));
             originalPrice = parsePrice(offer.path("highPrice").asText(null));
@@ -127,6 +137,7 @@ public class GenericParser {
                 .productName(title)
                 .mainPrice(price)
                 .originalPrice(originalPrice)
+                .currency(currency)
                 .productUrl(url)
                 .imageUrl(imageUrl)
                 .build());
@@ -194,11 +205,18 @@ public class GenericParser {
 
                 // Selling price — broadened selectors
                 Double price = null;
+                String currency = "Rs.";
                 for (String sel : List.of(".price", ".amount", "span[class*='price']",
                         "[class*='Price']", "[class*='price']", ".money")) {
                     ElementHandle priceEl = element.querySelector(sel);
                     if (priceEl != null) {
-                        String priceStr = priceEl.innerText().replaceAll("[^0-9.]", "");
+                        String priceText = priceEl.innerText();
+                        if (priceText.contains("$")) currency = "$";
+                        else if (priceText.contains("€")) currency = "€";
+                        else if (priceText.contains("£")) currency = "£";
+                        else if (priceText.contains("₹") || priceText.toLowerCase().contains("rs")) currency = "Rs.";
+
+                        String priceStr = priceText.replaceAll("[^0-9.]", "");
                         if (!priceStr.isBlank()) { price = Double.parseDouble(priceStr); break; }
                     }
                 }
@@ -229,6 +247,7 @@ public class GenericParser {
                         .productName(title)
                         .mainPrice(price)
                         .originalPrice(originalPrice)
+                        .currency(currency)
                         .productUrl(url)
                         .imageUrl(imageUrl)
                         .build());

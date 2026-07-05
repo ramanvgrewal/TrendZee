@@ -15,12 +15,9 @@ public enum Category {
     /** Sneaker culture, kicks, sole collecting. */
     SNEAKERS,
 
-    /** Developer merch, coding tees, Docker/Linux/GitHub prints. */
-    TECHWEAR,
+    /** Gym fits, activewear, compression gear. */
+    SPORTSWEAR,
 
-    /** Anime-themed clothing, otaku merch, manga apparel. */
-    ANIMEWEAR,
-
-    /** Cricket fan gear, IPL merch, team jerseys. */
-    CRICKETWEAR
+    /** Anime-themed clothing, otaku merch, manga-panel tees. */
+    ANIMEWEAR
 }

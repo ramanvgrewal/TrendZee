@@ -7,8 +7,8 @@ spring:
 
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://127.0.0.1:27017}
-      database: trendzy
+      uri: mongodb+srv://ramanvgrewal:Virendra%40123xRaman%40123@trendxee-db.yw2hgqv.mongodb.net/?appName=trendxee-DB
+      database: trendxee
 
   kafka:
     bootstrap-servers: ${KAFKA_SERVERS:127.0.0.1:9092}
@@ -28,14 +28,6 @@ spring:
         linger.ms: 1
         batch.size: 16384
 
-  ai:
-    openai:
-      api-key: ${GROQ_API_KEY:}
-      base-url: https://api.groq.com/openai
-      chat:
-        options:
-          model: llama-3.3-70b-versatile
-          stream: false
 
 scraper:
   instagram:

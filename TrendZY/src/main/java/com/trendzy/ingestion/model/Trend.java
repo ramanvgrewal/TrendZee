@@ -51,6 +51,8 @@ public class Trend {
     private SignalProducts signalProducts = new SignalProducts();
 
     private double estimatedPrice;
+    @Builder.Default
+    private String currency = "Rs.";
     private LocalDateTime firstDetectedAt;
     private LocalDateTime lastUpdatedAt;
 
@@ -78,6 +80,8 @@ public class Trend {
     public static class ProductDetail {
         private String brandName;
         private String title;
+        @Builder.Default
+        private String currency = "Rs.";
         private Integer price;
         private Integer originalPrice;
         private String shopUrl;

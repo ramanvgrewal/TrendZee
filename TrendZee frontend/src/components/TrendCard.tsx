@@ -64,12 +64,20 @@ function ProductBlock({
         <div className="text-[11px] uppercase tracking-widest text-white/40">
           {product.brandName}
         </div>
-        <div className="line-clamp-2 text-sm text-white/85">{product.title}</div>
+        <div className="line-clamp-2 text-sm text-white/85">
+          {source === "flipkart" && (!product.title || product.title === "Untitled product")
+            ? "sus product fr fr 🚩"
+            : product.title}
+        </div>
         <div className="mt-2 flex items-center justify-between">
           {product.price > 0 ? (
             <span className="font-display text-lg font-semibold text-white">
               {product.currency}
               {product.price.toLocaleString()}
+            </span>
+          ) : source === "flipkart" ? (
+            <span className="text-xs font-medium italic text-orange-400/80">
+              Watch Yourself Brotha... 💀
             </span>
           ) : (
             <span className="text-xs text-white/35">Price unavailable</span>
@@ -217,7 +225,7 @@ export function TrendCard({ trend }: { trend: Trend }) {
             <div className="text-[11px] text-white/40">
               est. price{" "}
               <span className="font-mono text-white/70">
-                Rs. {trend.estimatedPrice.toLocaleString()}
+                {trend.currency || "Rs."} {trend.estimatedPrice.toLocaleString()}
               </span>
             </div>
           )}

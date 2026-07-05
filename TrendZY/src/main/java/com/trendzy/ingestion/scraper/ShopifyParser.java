@@ -137,9 +137,15 @@ public class ShopifyParser {
 
                 // 👉 SELLING PRICE
                 Double price = null;
+                String currency = "Rs.";
                 ElementHandle priceEl = card.querySelector(".price, .money, .price__regular");
                 if (priceEl != null) {
-                    try { price = Double.parseDouble(priceEl.innerText().replaceAll("[^0-9.]", "")); } catch (Exception ignored) {}
+                    String priceText = priceEl.innerText();
+                    if (priceText.contains("$")) currency = "$";
+                    else if (priceText.contains("€")) currency = "€";
+                    else if (priceText.contains("£")) currency = "£";
+                    else if (priceText.contains("₹") || priceText.toLowerCase().contains("rs")) currency = "Rs.";
+                    try { price = Double.parseDouble(priceText.replaceAll("[^0-9.]", "")); } catch (Exception ignored) {}
                 }
 
                 // 👉 ORIGINAL PRICE (MRP)
@@ -171,6 +177,7 @@ public class ShopifyParser {
                         .productName(title)
                         .mainPrice(price)
                         .originalPrice(originalPrice)
+                        .currency(currency)
                         .imageUrl(imageUrl)
                         .productUrl(url)
                         .build());

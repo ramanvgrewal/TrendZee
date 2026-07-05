@@ -13,6 +13,8 @@ public class RawProduct {
     private String productName;
     private Double mainPrice;
     private Double originalPrice;
+    @Builder.Default
+    private String currency = "Rs.";
     private String productUrl;
     private String imageUrl;
     private boolean validated;
