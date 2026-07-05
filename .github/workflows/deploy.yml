@@ -3,7 +3,7 @@ name: Deploy TrendZY to AWS EC2
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch: # This adds a manual "Run" button in GitHub just in case!
 
 env:
