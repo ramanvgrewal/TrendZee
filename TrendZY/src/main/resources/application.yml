@@ -11,7 +11,7 @@ spring:
       database: trendxee
 
   kafka:
-    bootstrap-servers: ${KAFKA_SERVERS:127.0.0.1:9092}
+    bootstrap-servers: ${KAFKA_BROKERS:127.0.0.1:9092}
     admin:
       properties:
         request.timeout.ms: 30000
