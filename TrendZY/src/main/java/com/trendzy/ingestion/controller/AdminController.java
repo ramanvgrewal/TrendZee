@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class AdminController {
-
+// haha i am the admin.
     private final MongoTemplate mongoTemplate;
 
     @DeleteMapping("/trends/no-underdog")
