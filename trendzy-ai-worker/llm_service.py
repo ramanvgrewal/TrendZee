@@ -242,3 +242,153 @@ def extract_trend_data(
     except Exception as exc:
         LOGGER.exception("Failed to extract structured fashion intelligence")
         raise LlmServiceError("Unable to extract structured fashion intelligence.") from exc
+
+
+# ── Product Selection (AI-powered underdog ranking) ────────────────────────
+
+PRODUCT_SELECTION_SYSTEM_PROMPT = """
+You are the product selection engine for TrendZY. You receive:
+- A detected fashion trend (name, subcategory, vibeTags, aiSummary)
+- The original Instagram signal (caption + hashtags)
+- The target product category (e.g. STREETWEAR, SNEAKERS, SHIRTS)
+- A numbered list of scraped products from a creator's website
+
+Your job: select the SINGLE best-matching product for this trend.
+
+Steps:
+1. CATEGORY GATE — Eliminate products that clearly don't belong to the target
+   category. E.g. if category is SNEAKERS, a "Graphic Tee" is out.
+   Be reasonably flexible: "Oversized Shirt" fits STREETWEAR and SHIRTS.
+2. TREND RELEVANCE — Among remaining products, score how well each matches
+   the detected fashion trend name, subcategory, vibe tags, and the original
+   Instagram signal's aesthetic.
+3. IMAGE PRIORITY — Prefer products that have an image URL (non-null).
+4. SELECTION — Pick the product with the highest relevance.
+   If NO product meaningfully matches the category AND trend, set
+   selectedIndex to -1.
+
+Return ONE strict JSON object with EXACTLY this structure:
+{
+  "selectedIndex": <int, 0-based index into the products array, or -1 if none match>,
+  "reasoning": "<1-2 sentences explaining why this product was chosen>",
+  "confidenceScore": <float 0.0-1.0, how confident you are in this selection>
+}
+
+Rules:
+- selectedIndex MUST be a valid index or -1. Never null.
+- Do NOT return markdown, code fences, or commentary.
+- Prefer mid-range priced products over extremely cheap or extremely expensive ones.
+- CRITICAL: DO NOT select any product if its price is 'N/A' or missing. Products without a price are usually scraped logos, banners, or navigational elements. If the only relevant products have price=N/A, you MUST return -1.
+- If multiple products are equally relevant, prefer the one with better data
+  completeness (has image, has price, has descriptive name).
+""".strip()
+
+
+def _build_product_selection_prompt(
+    products: list[dict],
+    trend_data: dict,
+    category: str,
+    raw_text: str,
+    hashtags: list[str],
+) -> str:
+    product_lines: list[str] = []
+    for i, p in enumerate(products):
+        name = p.get("productName") or "Untitled"
+        price = p.get("mainPrice")
+        price_str = f"₹{price:.0f}" if price else "N/A"
+        has_image = "yes" if p.get("imageUrl") else "no"
+        product_lines.append(f"  [{i}] {name} | price={price_str} | hasImage={has_image}")
+
+    products_block = "\n".join(product_lines)
+
+    return (
+        "Select the best underdog product. Return only valid JSON.\n\n"
+        f"TARGET CATEGORY: {category or 'UNKNOWN'}\n\n"
+        f"DETECTED TREND:\n"
+        f"  name: {trend_data.get('name', '')}\n"
+        f"  subcategory: {trend_data.get('subcategory', '')}\n"
+        f"  vibeTags: {trend_data.get('vibeTags', [])}\n"
+        f"  aiSummary: {trend_data.get('aiSummary', '')}\n\n"
+        f"INSTAGRAM SIGNAL:\n"
+        f"  caption: {raw_text or ''}\n"
+        f"  hashtags: {hashtags or []}\n\n"
+        f"SCRAPED PRODUCTS ({len(products)} total):\n{products_block}"
+    )
+
+
+def select_underdog_product(
+    products: list[dict],
+    trend_data: dict,
+    category: str = "",
+    raw_text: str = "",
+    hashtags: list[str] | None = None,
+) -> dict[str, Any] | None:
+    """Use AI to select the best underdog product from a list of scraped products.
+
+    Returns the selected product dict (from the input list) or None if no match.
+    """
+    if not products:
+        return None
+
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        LOGGER.warning("GROQ_API_KEY not configured, skipping product selection")
+        return None
+
+    # Cap at 25 products to keep token usage reasonable
+    capped_products = products[:25]
+
+    client = Groq(api_key=api_key)
+    user_prompt = _build_product_selection_prompt(
+        capped_products, trend_data, category, raw_text, hashtags or [],
+    )
+    LOGGER.info(
+        "Sending %d products to Groq for AI underdog selection (category=%s, trend=%s)",
+        len(capped_products), category, trend_data.get("name", ""),
+    )
+
+    try:
+        response = _request_structured_completion(
+            client, PRODUCT_SELECTION_SYSTEM_PROMPT, user_prompt,
+        )
+        content = response.choices[0].message.content or "{}"
+        parsed = json.loads(_clean_llm_json(content))
+
+        if not isinstance(parsed, dict):
+            LOGGER.warning("Product selection LLM returned non-dict: %s", content)
+            return None
+
+        selected_index = parsed.get("selectedIndex", -1)
+        reasoning = parsed.get("reasoning", "")
+        confidence = parsed.get("confidenceScore", 0.0)
+
+        if not isinstance(selected_index, int) or selected_index < 0:
+            LOGGER.info(
+                "AI declined product selection (index=%s, reason=%s)",
+                selected_index, reasoning,
+            )
+            return None
+
+        if selected_index >= len(capped_products):
+            LOGGER.warning(
+                "AI returned out-of-range index %d for %d products",
+                selected_index, len(capped_products),
+            )
+            return None
+
+        selected = capped_products[selected_index]
+        LOGGER.info(
+            "AI selected product [%d] '%s' (confidence=%.2f, reason=%s)",
+            selected_index,
+            selected.get("productName", ""),
+            confidence,
+            reasoning,
+        )
+        return selected
+
+    except (json.JSONDecodeError, TypeError) as exc:
+        LOGGER.warning("Failed to parse product selection response: %s", exc)
+        return None
+    except Exception as exc:
+        LOGGER.exception("Product selection LLM call failed")
+        return None

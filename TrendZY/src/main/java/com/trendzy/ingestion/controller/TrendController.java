@@ -4,10 +4,11 @@ import com.trendzy.ingestion.model.Trend;
 import com.trendzy.ingestion.repository.TrendRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v2/trends")
@@ -18,17 +19,21 @@ public class TrendController {
     private final TrendRepository trendRepository;
 
     @GetMapping
-    public ResponseEntity<List<Trend>> getTrends(
-            @RequestParam(defaultValue = "streetwear") String category) {
-        
-        log.info("[CTRL] Fetching trends for category: {}", category);
-        
-        // Normalize to uppercase to match the values stored by the AI worker
+    public ResponseEntity<Slice<Trend>> getTrends(
+            @RequestParam(defaultValue = "streetwear") String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+
+        log.info("[CTRL] Fetching trends for category: {}, page: {}, size: {}",
+                category, page, size);
+
+        // Normalize to uppercase to match values stored in MongoDB
         String normalized = category.trim().toUpperCase();
-        
-        List<Trend> trends = trendRepository.findByCategory(normalized);
-        
-        // The frontend expects the JSON matching the raw document, which the Spring Data REST serialization covers nicely.
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Slice<Trend> trends = trendRepository.findByCategory(normalized, pageable);
+
         return ResponseEntity.ok(trends);
     }
 }

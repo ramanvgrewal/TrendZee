@@ -18,4 +18,5 @@ public class RawProduct {
     private String productUrl;
     private String imageUrl;
     private boolean validated;
+    private double heuristicScore;
 }

@@ -1,4 +1,5 @@
 import type { ProductMatch, SignalProduct, Trend } from "@/lib/mock-data";
+import { getCategoryById } from "@/lib/categories";
 
 type StoreKey = "underdog" | "amazon" | "flipkart";
 type RawDocument = Record<string, unknown>;
@@ -87,10 +88,19 @@ function mapSignalProduct(value: RawDocument, index: number): SignalProduct {
   };
 }
 
-function firstCompleteTriad(signalProducts: SignalProduct[]) {
-  return signalProducts.find((signalProduct) =>
-    storeKeys.every((store) => signalProduct[store] != null),
-  );
+function bestAvailableProducts(signalProducts: SignalProduct[]) {
+  const result: Record<string, ProductMatch | null> = {
+    underdog: null,
+    amazon: null,
+    flipkart: null,
+  };
+  for (const store of storeKeys) {
+    const sp = signalProducts.find((s) => s[store] != null);
+    if (sp) {
+      result[store] = sp[store];
+    }
+  }
+  return result;
 }
 
 function isCompleteProduct(product: ProductMatch | null): product is ProductMatch {
@@ -114,11 +124,7 @@ function estimatePrice(signalProducts: SignalProduct[]): number {
 
 function mapTrend(document: RawDocument): Trend {
   const signalProducts = normalizeSignalProducts(document.signalProducts).map(mapSignalProduct);
-  const products = firstCompleteTriad(signalProducts) ?? {
-    underdog: null,
-    amazon: null,
-    flipkart: null,
-  };
+  const products = bestAvailableProducts(signalProducts);
 
   return {
     id: idValue(document._id),
@@ -140,9 +146,11 @@ function mapTrend(document: RawDocument): Trend {
   };
 }
 
-export async function getTrendsByCategory(categoryId = "streetwear"): Promise<Trend[]> {
-  const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
-  const url = `${backendUrl}/api/v2/trends?category=${categoryId}`;
+export async function getTrendsByCategory(categoryId = "streetwear", page = 0): Promise<Trend[]> {
+  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8080";
+  const category = getCategoryById(categoryId);
+  const queryCategory = category ? category.enum : categoryId;
+  const url = `${backendUrl}/api/v2/trends?category=${queryCategory}&page=${page}`;
   
   try {
     const response = await fetch(url);
@@ -151,11 +159,12 @@ export async function getTrendsByCategory(categoryId = "streetwear"): Promise<Tr
       return [];
     }
     
-    const documents = await response.json();
-    const trends = documents.map(mapTrend).filter(hasCompleteTriad);
+    const data = await response.json();
+    const documents = Array.isArray(data) ? data : (data.content || []);
+    const trends = documents.map(mapTrend);
 
     console.info(
-      `[TrendZY] fetch(${url}) returned ${documents.length} docs; ${trends.length} have complete underdog/amazon/flipkart links with images.`,
+      `[TrendZY] fetch(${url}) returned ${documents.length} docs; rendering ${trends.length} trends (including partial ones).`,
     );
 
     return trends;

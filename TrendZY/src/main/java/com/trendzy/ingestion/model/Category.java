@@ -19,5 +19,20 @@ public enum Category {
     SPORTSWEAR,
 
     /** Anime-themed clothing, otaku merch, manga-panel tees. */
-    ANIMEWEAR
+    ANIMEWEAR,
+
+    /** Boxy tees, graphic prints, and statement tops. */
+    SHIRTS,
+
+    /** Baggy denim, cargo pants, parachute pants. */
+    BOTTOMS,
+
+    /** Chains, rings, caps, and the final pieces. */
+    ACCESSORIES,
+
+    /** Timepieces and wristwear. */
+    WATCHES,
+
+    /** Aesthetic scents, niche houses, perfumes. */
+    FRAGRANCES
 }

@@ -36,44 +36,97 @@ public class InstagramExploreClient {
     private static final String USER_AGENT        =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-    private static final int DOM_SETTLE_TIMEOUT   = 10_000;
+    private static final int DOM_SETTLE_TIMEOUT   = 15_000;
     private static final int POST_PAGE_TIMEOUT    = 8_000;
-    private static final int SCROLL_COUNT_PER_TAG = 2;
-    private static final int POSTS_PER_TAG        = 8;
-    private static final int MIN_POSTS_TOTAL      = 30;
+    private static final int SCROLL_COUNT_PER_TAG = 4;
+    private static final int POSTS_PER_TAG        = 15;
+    private static final int MIN_POSTS_TOTAL      = 50;
 
     // ── Category → Tag Mapping (keys match Category enum) ────────────────────
     private static final Map<String, List<String>> SECTION_TAGS = Map.of(
-            "STREETWEAR", List.of("streetwearindia", "indianstreetwear", "hgstreet", "homegrownstreetwear",
-                    "homegrownindia", "streetwearstartupindia", "streetwearbrandindia", "y2kfashionindia",
-                    "streetfashionindia", "hypebeastindia", "limiteddropindia", "capsulecollectionindia",
-                    "dropstodayindia", "boxyfitindia", "heavyweighttee", "frenchterryindia", "puffprint", "acidwashindia"),
+            "STREETWEAR", List.of(
+                    "streetwearindia",    // Your clean local streetwear anchor
+                    "blokecore",          // The global tag: massive volume, very high-quality aesthetic fits
+                    "vintagefootball",    // Brings in super clean retro jersey and tee styling
+                    "oversizedteesindia", // Keeps the focus on the actual product fit
+                    "hgstreet"            // Highly curated homegrown Indian streetwear community
+            ),
 
             "SPORTSWEAR", List.of(
-                    // Core Brand Indicators (Dodges the influencer selfies)
-                    "gymwearindia",
-                    "activewearindia",
-                    "gymwearbrandindia",
-                    "activewearbrandindia",
-
-                    // The Gen Z / Aesthetic terms
-                    "athleisureindia",         // Much higher signal than sportsleisure
-                    "athleisurewearindia",
-                    "homegrowngymwear",        // Forces the indie/D2C filter
-                    "homegrownactivewear",
-
-                    // Specific apparel types D2C brands push
-                    "pumpcoverindia",          // Massive Gen Z gym trend (oversized tees for gym)
-                    "compressionwearindia"
+                    "gymwearindia", "activewearindia", "gymwearbrandindia", "activewearbrandindia",
+                    "athleisureindia", "athleisurewearindia", "homegrowngymwear", "homegrownactivewear",
+                    "pumpcoverindia", "compressionwearindia"
             ),
 
             "ANIMEWEAR", List.of("animestreetwearindia", "animeclothingindia", "animemerchindia",
-                    "animedropindia", "weebmerchindia", "otakufashionindia", "animeapparelindia",
-                    "homegrownanime", "mangaapparelindia", "otakuapparelindia", "animestreetstyleindia"),
+                    "animedropindia", "otakufashionindia", "animeapparelindia",
+                    "homegrownanime", "animestreetstyleindia"),
 
-            "SNEAKERS", List.of("sneakerbrandindia", "homegrownsneakers", "indiansneakerbrand",
-                    "sneakercommunityindia", "homegrownkicks", "sneakersindia", "sneakerdropindia",
-                    "solecollectorindia", "sneakerboutiqueindia", "kicksofindia")
+            "SNEAKERS", List.of(
+                    "sneakerbrandindia", "homegrownsneakers", "indiansneakerbrand",
+                    "sneakercommunityindia", "sneakersforeveryday", "sneakersindia",
+                    "sneakerdropindia", "sneakerboutiqueindia",
+                    "kicksofindia", "sneakerheadindia",
+                    "customsneakersindia", "sneakercultureindia"
+            ),
+
+            "SHIRTS", List.of(
+                    // Your originals
+                    "linenshirtsindia", "shirts", "oxfordshirtsindia",
+                    "oldmoneyshirts", "classicmenshirts", "plainshirts",
+
+                    // Broad Indian Shirt Tags
+                    "mensshirtsindia", "casualshirtsindia", "formalshirtsindia",
+                    "shirtsformenindia", "mensshirtsstyle",
+
+                    // Specific Shirt Styles & Fits (Trending in Streetwear/Casual)
+                    "printedshirtsindia", "oversizedshirtsindia", "cubancollarindia",
+                    "flannelshirtsindia", "buttondownindia", "stripedshirtsindia",
+                    "corduroyshirtsindia", "halfshirtsindia"
+            ),
+
+            "BOTTOMS", List.of(
+                    // Your originals
+                    "baggyjeansindia", "cargopantsindia", "parachutejeansindia",
+                    "widelegpantsindia", "jortsindia", "streetwearbottomsindia",
+
+                    // Jeans & Denim Additions
+                    "straightfitjeansindia", "flaredjeansindia", "bootcutjeansindia", "streetweardenimindia",
+
+                    // Casual, Sweats & Utility
+                    "utilitypantsindia", "sweatpantsindia", "joggersindia", "trackpantsindia",
+
+                    // Shorts & Alternatives
+                    "cargoshortsindia", "corduroypantsindia", "mensshortsindia"
+            ),
+
+            "ACCESSORIES", List.of(
+                    // Your originals
+                    "streetwearaccessoriesindia", "chainsindia", "ringsindia",
+                    "silverjewelryindia", "truckercapsindia", "beaniesindia",
+
+                    // Additions
+                    "mensjewelryindia", "totebagsindia", "pendantindia",
+                    "sunglassesindia", "mensaccessoriesindia", "y2kaccessoriesindia"
+            ),
+
+            "WATCHES", List.of(
+                    // Your originals
+                    "vintagewatchesindia", "digitalwatchesindia",
+
+                    // Additions (HMT is huge in the Indian vintage/streetwear scene right now)
+                    "watchesindia", "hmtwatches", "hmtwatchesindia", "budgetwatchesindia"
+            ),
+
+            "FRAGRANCES", List.of(
+                    // Your originals
+                    "nichefragrancesindia", "perfumeindia", "fragcommindia",
+                    "scentofthedayindia", "desifragranceaddicts",
+
+                    // Additions
+                    "fragranceindia", "attarindia", "indianperfumers",
+                    "perfumecollectionindia"
+            )
     );
 
     // ── URL Patterns ─────────────────────────────────────────────────────────
@@ -207,14 +260,23 @@ public class InstagramExploreClient {
                     } else {
                         log.debug("[EXPLORE-V2] ⚠ No signal extracted from: {}", postUrl);
                     }
+                } catch (IllegalStateException e) {
+                    if ("HTTP_429".equals(e.getMessage())) {
+                        log.error("[EXPLORE-V2] 🚨 RATE LIMIT HIT (429). Aborting batch to protect session.");
+                        break;
+                    }
+                    log.warn("[EXPLORE-V2] Error on {}: {}", postUrl, e.getMessage());
                 } catch (TimeoutError te) {
                     log.warn("[EXPLORE-V2] Timeout — skipping: {}", postUrl);
                 } catch (Exception e) {
                     log.warn("[EXPLORE-V2] Error on {}: {}", postUrl, e.getMessage());
                 }
-                RandomDelayUtil.shortDelay();
-                if (processed % 10 == 0 && processed < total)
-                    RandomDelayUtil.delay(8_000, 12_000, "v2-rate-limit-pause");
+                
+                // Increase delays significantly to avoid 429 blocks
+                RandomDelayUtil.delay(3000, 6000, "post-to-post delay");
+                if (processed % 5 == 0 && processed < total) {
+                    RandomDelayUtil.delay(10_000, 15_000, "v2-rate-limit-pause");
+                }
             }
             signalPage.close();
             ctx.close();
@@ -234,10 +296,15 @@ public class InstagramExploreClient {
 
     private TrendSignal extractSignalFromPost(Page page, String postUrl) {
         // ── Navigate ──────────────────────────────────────────────────────────
+        Response response = null;
         try {
-            page.navigate(postUrl, new Page.NavigateOptions().setTimeout(POST_PAGE_TIMEOUT));
+            response = page.navigate(postUrl, new Page.NavigateOptions().setTimeout(POST_PAGE_TIMEOUT));
         } catch (TimeoutError te) {
             log.warn("[EXPLORE-V2] Navigation timeout for: {}", postUrl);
+        }
+        
+        if (response != null && response.status() == 429) {
+            throw new IllegalStateException("HTTP_429");
         }
         try {
             page.waitForLoadState(LoadState.DOMCONTENTLOADED,
@@ -262,6 +329,9 @@ public class InstagramExploreClient {
         }
 
         if (html == null || html.length() < 200) {
+            if (html != null && (html.contains("HTTP ERROR 429") || html.contains("429 Too Many Requests") || html.contains("rate limit"))) {
+                throw new IllegalStateException("HTTP_429");
+            }
             log.warn("[EXPLORE-V2] Page suspiciously small ({} chars) for {}",
                     html != null ? html.length() : 0, postUrl);
             return null;
@@ -716,7 +786,7 @@ public class InstagramExploreClient {
             RandomDelayUtil.longDelay();
 
             for (int i = 0; i < SCROLL_COUNT_PER_TAG; i++) {
-                page.evaluate("window.scrollBy(0, window.innerHeight * 1.5)");
+                page.evaluate("window.scrollBy(0, window.innerHeight * 2)");
                 RandomDelayUtil.delay();
                 log.debug("[EXPLORE] Scroll {}/{} on {}", i + 1, SCROLL_COUNT_PER_TAG, url);
             }

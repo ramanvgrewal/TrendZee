@@ -9,7 +9,7 @@ from bson import ObjectId
 from pymongo import ReturnDocument
 
 from database import trends, v2_signals
-from llm_service import extract_trend_data
+from llm_service import extract_trend_data, select_underdog_product
 
 LOGGER = logging.getLogger(__name__)
 
@@ -106,6 +106,7 @@ def upsert_trend_document(
     now: datetime,
 ) -> dict[str, Any]:
     name = _normalize_name(_safe_string(trend_payload.get("name")))
+    category = _safe_string(signal.get("category")).upper()
 
     # Perform case-insensitive search by name scoped to category
     name_regex = re.compile(f"^{re.escape(name)}$", re.IGNORECASE)
@@ -120,8 +121,6 @@ def upsert_trend_document(
 
     raw_india_flag = trend_payload.get("indiaRelevant", False)
     is_india_relevant: bool = bool(raw_india_flag) if not isinstance(raw_india_flag, bool) else raw_india_flag
-
-    category = _safe_string(signal.get("category")).upper()
 
     enrichment_query = _safe_string(trend_payload.get("enrichmentQuery")).lower()
     if not enrichment_query:
@@ -147,7 +146,7 @@ def upsert_trend_document(
             "indiaRelevant": is_india_relevant,
             "indiaRelevanceNote": _safe_string(trend_payload.get("indiaRelevanceNote")),
             "trendScore": macro_score,
-            "enrichmentStatus": "PENDING",
+            "enrichmentStatus": "AWAITING_UNDERDOG",
             "enrichmentQuery": enrichment_query,
             "aiBrandNames": _safe_string_list(trend_payload.get("aiBrandNames")),
             "estimatedPrice": estimated_price,
@@ -247,6 +246,66 @@ def process_and_upsert(signal_id: str) -> None:
                     "aiProcessingStartedAt": "",
                 },
             },
+        )
+
+        # ── Phase 2: AI-powered underdog product selection ──────────────
+        scraped_products = signal.get("scrapedProducts")
+        if isinstance(scraped_products, list) and scraped_products:
+            author_username = _extract_author_username(signal)
+            LOGGER.info(
+                "Starting AI product selection for signal %s (%d scraped products)",
+                signal_id, len(scraped_products),
+            )
+
+            selected = select_underdog_product(
+                products=scraped_products,
+                trend_data=extraction,
+                category=category,
+                raw_text=raw_text,
+                hashtags=hashtags,
+            )
+
+            if selected:
+                # Build the ProductDetail-compatible document
+                underdog_doc = {
+                    "brandName": author_username,
+                    "title": selected.get("productName", ""),
+                    "price": int(selected["mainPrice"]) if selected.get("mainPrice") else None,
+                    "originalPrice": int(selected["originalPrice"]) if selected.get("originalPrice") else None,
+                    "currency": selected.get("currency", "Rs."),
+                    "shopUrl": selected.get("productUrl"),
+                    "imageUrl": selected.get("imageUrl"),
+                    "codAvailable": True,
+                }
+
+                # Write underdog product back to the signal
+                v2_signals.update_one(
+                    {"_id": signal_object_id},
+                    {"$set": {"underdogProduct": underdog_doc}},
+                )
+
+                # Also update the trend's signalProducts.underdog
+                trends.update_one(
+                    {"_id": trend_document.get("_id")},
+                    {"$set": {"signalProducts.underdog": underdog_doc}},
+                )
+
+                LOGGER.info(
+                    "AI selected underdog '%s' for signal %s → trend %s",
+                    underdog_doc["title"], signal_id, trend_name,
+                )
+            else:
+                LOGGER.info(
+                    "AI found no suitable underdog product for signal %s (category=%s, trend=%s)",
+                    signal_id, category, trend_name,
+                )
+        else:
+            LOGGER.debug("No scraped products on signal %s, skipping product selection", signal_id)
+
+        # Now that Phase 1 and 2 are complete, mark the trend as PENDING so Java can enrich it.
+        trends.update_one(
+            {"_id": trend_document.get("_id")},
+            {"$set": {"enrichmentStatus": "PENDING"}}
         )
 
         LOGGER.info(

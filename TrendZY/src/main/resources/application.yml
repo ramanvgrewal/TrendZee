@@ -7,8 +7,8 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb+srv://ramanvgrewal:Virendra%40123xRaman%40123@trendxee-db.yw2hgqv.mongodb.net/?appName=trendxee-DB
-      database: trendxee
+      uri:
+      database:
 
   kafka:
     bootstrap-servers: ${KAFKA_BROKERS:127.0.0.1:9092}

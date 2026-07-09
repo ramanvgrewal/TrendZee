@@ -49,7 +49,7 @@ function ProductBlock({
             src={product.imageUrl}
             alt={product.title}
             loading="lazy"
-            className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-white/[0.04] text-xs text-white/35">
@@ -77,7 +77,7 @@ function ProductBlock({
             </span>
           ) : source === "flipkart" ? (
             <span className="text-xs font-medium italic text-orange-400/80">
-              Watch Yourself Brotha... 💀
+              might be cheapest, go check it out
             </span>
           ) : (
             <span className="text-xs text-white/35">Price unavailable</span>
@@ -177,9 +177,9 @@ export function TrendCard({ trend }: { trend: Trend }) {
 
       {tags.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-1.5">
-          {tags.map((tag) => (
+          {tags.map((tag, i) => (
             <span
-              key={tag}
+              key={`${tag}-${i}`}
               className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/75"
             >
               #{tag}
@@ -202,21 +202,6 @@ export function TrendCard({ trend }: { trend: Trend }) {
         )}
       </div>
 
-      {trend.whyTrending.length > 0 && (
-        <div className="mt-5">
-          <div className="text-[11px] uppercase tracking-widest text-white/45">
-            Why it&apos;s trending
-          </div>
-          <ul className="mt-2 space-y-1.5">
-            {trend.whyTrending.map((reason, index) => (
-              <li key={`${reason}-${index}`} className="flex gap-2 text-sm text-white/75">
-                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-white/40" />
-                <span>{reason}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       <div className="mt-7">
         <div className="mb-3 flex items-center justify-between">

@@ -72,8 +72,12 @@ public class ProductEnrichmentService {
             "SNEAKERS",    "shoes",
             "STREETWEAR",  "clothing",
             "SPORTSWEAR",  "activewear",
+            "ANIMEWEAR",   "clothing",
+            "SHIRTS",      "shirt",
+            "BOTTOMS",     "pants",
             "WATCHES",     "watch",
-            "ACCESSORIES", "accessories"
+            "ACCESSORIES", "accessories",
+            "FRAGRANCES",  "perfume"
     );
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
@@ -146,17 +150,25 @@ public class ProductEnrichmentService {
             return;
         }
 
-        // Pick the first signal only
-        String signalId = signalIds.get(0);
-        var signalOpt = signalRepository.findById(signalId);
-        if (signalOpt.isEmpty()) {
+        // Pick the first valid signal
+        String signalId = null;
+        TrendSignal signal = null;
+        for (String sId : signalIds) {
+            var signalOpt = signalRepository.findById(sId);
+            if (signalOpt.isPresent()) {
+                signalId = sId;
+                signal = signalOpt.get();
+                break;
+            }
+        }
+        
+        if (signal == null) {
             trend.setEnrichmentStatus("FAILED");
             trend.setLastUpdatedAt(LocalDateTime.now());
             trendRepository.save(trend);
-            log.warn("[ENRICH] Signal {} not found for '{}'", signalId, trend.getTrendName());
+            log.warn("[ENRICH] No valid signal found for '{}'", trend.getTrendName());
             return;
         }
-        TrendSignal signal = signalOpt.get();
 
         // ── 1. Query keywords (LLM → fallback trend name) ──
         String query = pickQuery(signal, trend);
@@ -169,9 +181,8 @@ public class ProductEnrichmentService {
         try { amazon   = scrapeAmazon(marketplaceQuery, context); } catch (Exception e) { log.warn("[AMAZON] {}", e.getMessage()); }
         try { flipkart = scrapeFlipkart(marketplaceQuery, context); } catch (Exception e) { log.warn("[FLIPKART] {}", e.getMessage()); }
 
-        // ── 3. Underdog: caption URL first, then IG bio (category-filtered) ──
-        Set<String> usedUnderdogHosts = new HashSet<>();
-        Trend.ProductDetail underdog = resolveUnderdog(signal, context, playwright, usedUnderdogHosts, query, trend.getCategory());
+        // ── 3. Underdog: Pulled directly from signal (extracted during ingestion) ──
+        Trend.ProductDetail underdog = signal.getUnderdogProduct();
 
         // Set the single SignalProducts object
         trend.setSignalProducts(Trend.SignalProducts.builder()
@@ -204,6 +215,18 @@ public class ProductEnrichmentService {
 
         log.info("[ENRICH] ✅ '{}' → {} | pieces={}/3",
                 trend.getTrendName(), status, totalPieces);
+
+        // Auto-delete processed signals to free up space
+        if (signalIds != null && !signalIds.isEmpty()) {
+            for (String sId : signalIds) {
+                try {
+                    signalRepository.deleteById(sId);
+                    log.debug("[ENRICH] Deleted processed signal {}", sId);
+                } catch (Exception e) {
+                    log.warn("[ENRICH] Failed to delete processed signal {}: {}", sId, e.getMessage());
+                }
+            }
+        }
     }
 
     // ── Query selection ────────────────────────────────────────────────
@@ -237,93 +260,7 @@ public class ProductEnrichmentService {
         return base;
     }
 
-    // ── Underdog resolution (caption URL → IG bio) ────────────────────
-    private Trend.ProductDetail resolveUnderdog(TrendSignal signal, BrowserContext context,
-                                                Playwright playwright, Set<String> usedHosts,
-                                                String query, String category) {
-        // 1) Caption URL first
-        String captionUrl = firstUsableUrl(signal.getRawText());
-        if (captionUrl != null) {
-            Trend.ProductDetail p = scrapeUnderdogFromUrl(captionUrl, signal, playwright, usedHosts, query, category);
-            if (p != null) return p;
-        }
 
-        // 2) Instagram bio
-        String platform = signal.getPlatform() != null ? signal.getPlatform().name() : "";
-        if ("INSTAGRAM".equalsIgnoreCase(platform) && signal.getAuthorUsername() != null) {
-            try {
-                String bioLink = instagramBioExtractor.extractBioLink(signal.getAuthorUsername(), context);
-                if (bioLink != null && !bioLink.isBlank()) {
-                    return scrapeUnderdogFromUrl(bioLink, signal, playwright, usedHosts, query, category);
-                }
-            } catch (Exception e) {
-                log.warn("[UNDERDOG] IG bio failed for @{}: {}", signal.getAuthorUsername(), e.getMessage());
-            }
-        }
-        return null;
-    }
-
-    private String firstUsableUrl(String rawText) {
-        if (rawText == null || rawText.isBlank()) return null;
-        Matcher m = URL_IN_CAPTION.matcher(rawText);
-        while (m.find()) {
-            String url = m.group();
-            String host = safeHost(url);
-            if (host != null && !BLOCKED_URL_HOSTS.contains(host)) return url;
-        }
-        return null;
-    }
-
-    private String safeHost(String url) {
-        try {
-            String h = URI.create(url).getHost();
-            return h == null ? null : h.toLowerCase();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Trend.ProductDetail scrapeUnderdogFromUrl(String url, TrendSignal signal,
-                                                      Playwright playwright, Set<String> usedHosts,
-                                                      String query, String category) {
-        String host = safeHost(url);
-        if (host == null || usedHosts.contains(host)) return null;  // dedupe
-
-        try {
-            List<RawProduct> products = websiteClient.extractProducts(url, playwright, signal.getAuthorUsername());
-            if (products == null || products.isEmpty()) return null;
-
-            RawProduct p = findBestMatch(products, query, category);
-            usedHosts.add(host);
-
-            Integer selling = p.getMainPrice() != null ? Integer.valueOf(p.getMainPrice().intValue()) : null;
-            Integer mrp     = p.getOriginalPrice() != null ? Integer.valueOf(p.getOriginalPrice().intValue()) : selling;
-
-            // Fall back to the signal's original post media URL when the scraper
-            // could not fetch a product image (e.g. gated/loading-screen sites).
-            String imageUrl = p.getImageUrl();
-            if (imageUrl == null || imageUrl.isBlank()) {
-                imageUrl = signal.getMediaUrl();
-                if (imageUrl != null && !imageUrl.isBlank()) {
-                    log.info("[UNDERDOG] Image scrape failed for '{}' — falling back to signal mediaUrl", url);
-                }
-            }
-
-            return Trend.ProductDetail.builder()
-                    .brandName(signal.getAuthorUsername())
-                    .title(p.getProductName())
-                    .price(selling)
-                    .originalPrice(mrp)
-                    .currency(p.getCurrency() != null ? p.getCurrency() : "Rs.")
-                    .shopUrl(p.getProductUrl())
-                    .imageUrl(imageUrl)
-                    .codAvailable(true)
-                    .build();
-        } catch (Exception e) {
-            log.warn("[UNDERDOG] scrape failed for {}: {}", url, e.getMessage());
-            return null;
-        }
-    }
 
     // ── Amazon India ───────────────────────────────────────────────────
     private Trend.ProductDetail scrapeAmazon(String query, BrowserContext context) {
@@ -518,7 +455,15 @@ public class ProductEnrichmentService {
             return best;
         }
 
-        // No keyword match found — fall back to first product
+        // No keyword match found — fall back to the first product that has a price, if any
+        for (RawProduct product : products) {
+            if (product.getMainPrice() != null) {
+                log.debug("[UNDERDOG] No keyword match, falling back to first product with price: '{}'", product.getProductName());
+                return product;
+            }
+        }
+        
+        // If none have a price, just fall back to the first one
         return products.get(0);
     }
 

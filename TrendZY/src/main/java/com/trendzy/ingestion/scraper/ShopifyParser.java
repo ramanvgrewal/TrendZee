@@ -115,7 +115,11 @@ public class ShopifyParser {
 
     private List<RawProduct> extractViaDomCards(Page page, String storeRoot) {
         List<RawProduct> results = new ArrayList<>();
-        List<String> cardSelectors = List.of(".product-card", ".product-item", ".grid-product", "li.grid__item");
+        List<String> cardSelectors = List.of(
+                ".product-card", ".product-item", ".grid-product", "li.grid__item",
+                ".product-grid-item", ".grid-view-item", "[class*='product-card']",
+                "[class*='ProductCard']", "product-card", ".collection-product-card"
+        );
 
         List<ElementHandle> cards = new ArrayList<>();
         for (String sel : cardSelectors) {
@@ -164,12 +168,20 @@ public class ShopifyParser {
                     if (url != null && !url.startsWith("http")) url = storeRoot.replaceAll("/+$", "") + url;
                 }
 
-                // 👉 IMAGE EXTRACTION
+                // 👉 IMAGE EXTRACTION — industry-grade: src → data-src → data-lazy-src → srcset
                 String imageUrl = null;
                 ElementHandle imgEl = card.querySelector("img");
                 if (imgEl != null) {
                     imageUrl = imgEl.getAttribute("src");
                     if (imageUrl == null || imageUrl.contains("data:image")) imageUrl = imgEl.getAttribute("data-src");
+                    if (imageUrl == null) imageUrl = imgEl.getAttribute("data-lazy-src");
+                    if (imageUrl == null) imageUrl = imgEl.getAttribute("data-original");
+                    if (imageUrl == null) {
+                        String srcset = imgEl.getAttribute("srcset");
+                        if (srcset != null && !srcset.isBlank()) {
+                            imageUrl = srcset.split(",")[0].trim().split("\\s+")[0];
+                        }
+                    }
                     if (imageUrl != null && imageUrl.startsWith("//")) imageUrl = "https:" + imageUrl;
                 }
 

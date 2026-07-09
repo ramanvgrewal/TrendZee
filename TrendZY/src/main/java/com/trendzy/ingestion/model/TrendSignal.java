@@ -59,4 +59,24 @@ public class TrendSignal {
     /** LLM-extracted product search terms specific to THIS signal. */
     @Builder.Default
     private List<String> extractedKeywords = new ArrayList<>();
+
+    /** All products scraped from the creator's website — AI worker selects the best one. */
+    @Builder.Default
+    private List<ScrapedProduct> scrapedProducts = new ArrayList<>();
+
+    private Trend.ProductDetail underdogProduct;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ScrapedProduct {
+        private String productName;
+        private Double mainPrice;
+        private Double originalPrice;
+        @Builder.Default
+        private String currency = "Rs.";
+        private String productUrl;
+        private String imageUrl;
+    }
 }

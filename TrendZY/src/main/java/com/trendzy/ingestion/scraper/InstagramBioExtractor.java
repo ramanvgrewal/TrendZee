@@ -318,12 +318,30 @@ public class InstagramBioExtractor {
         return host != null && AGGREGATOR_HOSTS.contains(host);
     }
 
+    private static final Set<String> ALLOWED_TLDS = Set.of(
+            ".com", ".in", ".co.in", ".store", ".shop", ".co", ".io", 
+            ".net", ".org", ".xyz", ".biz", ".online", ".tech", ".app", 
+            ".me", ".us", ".uk", ".boutique", ".clothing", ".fashion",
+            ".global", ".life", ".market", ".style", ".world", ".studio", ".agency",
+            ".design", ".art"
+    );
+
+    private boolean hasValidStoreTld(String host) {
+        if (host == null) return false;
+        for (String tld : ALLOWED_TLDS) {
+            if (host.endsWith(tld)) return true;
+        }
+        return false;
+    }
+
     private boolean isValidBioLink(String url) {
         if (url == null || url.isBlank()) return false;
         if (!(url.startsWith("http://") || url.startsWith("https://"))) return false;
         String host = host(url);
         if (host == null || !host.contains(".")) return false;
-        return !isBlocked(url);
+        if (isBlocked(url)) return false;
+        if (isAggregator(url)) return true;
+        return hasValidStoreTld(host);
     }
 
     private String host(String url) {

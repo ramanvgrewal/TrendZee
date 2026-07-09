@@ -2,8 +2,11 @@
 export const Category = {
   STREETWEAR: "STREETWEAR",
   SNEAKERS: "SNEAKERS",
+  SHIRTS: "SHIRTS",
+  BOTTOMS: "BOTTOMS",
   SPORTSWEAR: "SPORTSWEAR",
-  ANIMEWEAR: "ANIMEWEAR",
+  WATCHES: "WATCHES",
+  FRAGRANCES: "FRAGRANCES",
 } as const;
 
 export type CategoryEnum = (typeof Category)[keyof typeof Category];
@@ -11,8 +14,11 @@ export type CategoryEnum = (typeof Category)[keyof typeof Category];
 export const categoryOptions = [
   { id: "streetwear", label: "Streetwear", enum: Category.STREETWEAR },
   { id: "sneakers", label: "Sneakers", enum: Category.SNEAKERS },
-  { id: "sportswear", label: "Sportswear/Gymwear", enum: Category.SPORTSWEAR },
-  { id: "animewear", label: "Animewear", enum: Category.ANIMEWEAR },
+  { id: "shirts", label: "Upper", enum: Category.SHIRTS },
+  { id: "bottoms", label: "Bottoms", enum: Category.BOTTOMS },
+  { id: "gym", label: "Gym", enum: Category.SPORTSWEAR },
+  { id: "watches", label: "Watches", enum: Category.WATCHES },
+  { id: "fragrances", label: "Fragrances", enum: Category.FRAGRANCES },
 ] as const;
 
 export type CategoryId = (typeof categoryOptions)[number]["id"];

@@ -56,8 +56,7 @@ export const aesthetics: Aesthetic[] = [
   {
     id: "streetwear",
     name: "STREETWEAR",
-    description:
-      "The heart of TrendXee. Baggy denims, boxy tees, layered hoodies and the underdog fits creators are actually wearing this week.",
+    description: "The heart of TrendXee. Baggy denims, boxy tees, layered hoodies and the underdog fits creators are actually wearing this week.",
     signalCount: 8421,
     trendScore: 97,
     colorPalette: ["#f97316", "#dc2626", "#fde047", "#0f172a"],
@@ -67,35 +66,62 @@ export const aesthetics: Aesthetic[] = [
   {
     id: "sneakers",
     name: "SNEAKERS",
-    description:
-      "Sneaker culture, grail drops, chunky silhouettes and the resell-tier kicks lighting up sneaker-tok.",
+    description: "Sneaker culture, grail drops, chunky silhouettes and the resell-tier kicks lighting up sneaker-tok.",
     signalCount: 4980,
     trendScore: 91,
-    colorPalette: ["#fbbf24", "#ef4444", "#111827", "#f5f5f4"],
+    colorPalette: ["#fde047", "#facc15", "#eab308", "#111827"], // yellow glow
     heroImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&q=80",
     vibeTags: ["chunky", "retro", "grail", "colorway"],
   },
   {
-    id: "sportswear",
-    name: "SPORTSWEAR",
-    description:
-      "Gym fits, activewear, compression tees, and performance gear that transitions from the workout to the streets.",
-    signalCount: 4200,
-    trendScore: 88,
-    colorPalette: ["#10b981", "#3b82f6", "#1e293b", "#f8fafc"],
-    heroImage: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=900&q=80",
-    vibeTags: ["activewear", "gym", "compression", "athletic"],
+    id: "shirts",
+    name: "UPPER",
+    description: "Boxy tees, graphic prints, and statement tops taking over the feed.",
+    signalCount: 5328,
+    trendScore: 89,
+    colorPalette: ["#22d3ee", "#06b6d4", "#0891b2", "#111827"], // cyan glow
+    heroImage: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=900&q=80",
+    vibeTags: ["boxy", "graphic", "layered", "statement"],
   },
   {
-    id: "animewear",
-    name: "ANIMEWEAR",
-    description:
-      "Anime-themed clothing, otaku merch, manga-panel tees and the anime-core graphics flooding fit-check reels.",
-    signalCount: 3560,
-    trendScore: 86,
-    colorPalette: ["#ec4899", "#8b5cf6", "#22d3ee", "#111827"],
-    heroImage: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=900&q=80",
-    vibeTags: ["anime-core", "manga", "graphic-tee", "otaku"],
+    id: "bottoms",
+    name: "BOTTOMS",
+    description: "Baggy denim, cargo pants, and the silhouettes defining the lower half.",
+    signalCount: 3980,
+    trendScore: 88,
+    colorPalette: ["#3b82f6", "#2563eb", "#1d4ed8", "#111827"], // blue glow
+    heroImage: "https://images.unsplash.com/photo-1542272604-780c4050d153?w=900&q=80",
+    vibeTags: ["baggy", "cargo", "denim", "parachute"],
+  },
+  {
+    id: "gym",
+    name: "GYM",
+    description: "Activewear, pump covers, lifting belts, and the athletic fits dominating fitness-tok.",
+    signalCount: 2410,
+    trendScore: 85,
+    colorPalette: ["#f8fafc", "#f1f5f9", "#e2e8f0", "#111827"], // white glow
+    heroImage: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80",
+    vibeTags: ["activewear", "pumpcover", "compression", "lifting"],
+  },
+  {
+    id: "watches",
+    name: "WATCHES",
+    description: "Timepieces and wristwear catching the algorithm's eye.",
+    signalCount: 1890,
+    trendScore: 82,
+    colorPalette: ["#fde047", "#facc15", "#ca8a04", "#111827"], // yellow glow
+    heroImage: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=900&q=80",
+    vibeTags: ["vintage", "metallic", "digital", "analog"],
+  },
+  {
+    id: "fragrances",
+    name: "FRAGRANCES",
+    description: "The aesthetic scents, niche houses, and the invisible vibe check.",
+    signalCount: 2140,
+    trendScore: 84,
+    colorPalette: ["#f472b6", "#ec4899", "#db2777", "#111827"], // pink glow
+    heroImage: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=900&q=80",
+    vibeTags: ["niche", "designer", "scent", "layering"],
   },
 ];
 

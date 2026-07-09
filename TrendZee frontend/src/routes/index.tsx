@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Radio, Sparkles } from "lucide-react";
-import { AestheticCard } from "@/components/AestheticCard";
+import { ArrowUpRight, Maximize, Filter, Link as LinkIcon, MonitorPlay } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/SiteHeader";
 import { aesthetics } from "@/lib/mock-data";
@@ -11,177 +10,175 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const totalSignals = aesthetics.reduce((s, a) => s + a.signalCount, 0);
   const streetwear = aesthetics.find((a) => a.id === "streetwear")!;
   const rest = aesthetics.filter((a) => a.id !== "streetwear");
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans">
       <SiteHeader />
 
       {/* Hero */}
-      <section className="relative mx-auto max-w-7xl px-6 pb-16 pt-20">
+      <section className="relative mx-auto max-w-[1400px] px-6 pb-2 pt-24 md:pt-28">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 1, y: 0 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="flex flex-col items-start gap-6"
+          className="flex flex-col items-start gap-6 max-w-2xl"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-xl">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-            </span>
-            <span className="text-xs font-medium tracking-wide text-white/80">
-              live · {totalSignals.toLocaleString()} signals cooking this week
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3 py-1 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+            <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-100">
+              LIVE FEED
             </span>
           </div>
 
-          <h1 className="max-w-4xl font-display text-6xl font-semibold leading-[1.02] tracking-tighter text-white md:text-8xl">
-            fits before they <span className="text-gradient">go viral</span>.
+          <h1 className="font-display text-7xl font-black leading-[0.9] tracking-tighter text-white md:text-[100px]">
+            fits before they <br />
+            <span className="text-gradient drop-shadow-[0_0_20px_rgba(244,114,182,0.6)] uppercase italic">
+              go viral.
+            </span>
           </h1>
 
-          <p className="max-w-2xl text-lg text-white/60">
-            TrendXee is the AI-powered feed reading the internet&apos;s style pulse —
+          <p className="max-w-xl text-lg text-white/60 leading-relaxed font-medium">
+            TrendXee is the AI-powered feed reading the internet's style pulse —
             we cluster Reels, TikToks and creator drops into aesthetic movements
             and hand you the underdog fit before the algorithm does.
           </p>
 
-          {/* Creative TrendXee.com Logo */}
-          <div className="relative group cursor-pointer mt-4 mb-2">
-            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-500 opacity-25 blur transition duration-1000 group-hover:opacity-75 group-hover:duration-200" />
-            <div className="relative flex items-center gap-2 rounded-xl bg-black/50 px-4 py-2 ring-1 ring-white/10 backdrop-blur-xl">
-              <Sparkles className="h-5 w-5 text-emerald-400 animate-pulse" />
-              <span className="font-display text-2xl font-black tracking-tight text-white">
-                Trend<span className="text-emerald-400">Xee</span>.com
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Link
-              to="/aesthetic/$id"
-              params={{ id: "streetwear" }}
-              className="group flex items-center gap-2 rounded-full aesthetic-gradient px-5 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
-            >
-              Explore aesthetics
+          <div className="mt-2 flex flex-wrap items-center gap-4">
+            <Link to="/aesthetic/$id" params={{ id: "streetwear" }} className="group flex items-center gap-2 rounded-full bg-white/10 border border-purple-500/50 px-6 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all hover:bg-white/20">
+              enter the arcade
               <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
-            <button
-              onClick={() => alert("cool brotha cool 🤫 we keep the sauce secret")}
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-            >
+            <button onClick={() => alert("we aint spoil the secret sauce")} className="rounded-full border border-white/20 bg-transparent px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10">
               How the engine works
             </button>
           </div>
+          
+          <div className="mt-8 text-[10px] font-mono font-bold tracking-widest text-white/30 uppercase">
+            TRENDXEE.COM - V0.9.4-BETA
+          </div>
         </motion.div>
+      </section>
 
-        {/* Stat row */}
-        <div className="mt-20 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/5 md:grid-cols-4">
-          {[
-            { label: "Signals / week", value: `${(totalSignals / 1000).toFixed(1)}k` },
-            { label: "Trend score refresh", value: "hourly" },
-            { label: "Marketplaces mapped", value: "3" },
-            { label: "Products per trend", value: "3" },
-          ].map((s) => (
-            <div key={s.label} className="bg-obsidian/80 p-6">
-              <div className="font-display text-3xl font-semibold text-white">{s.value}</div>
-              <div className="mt-1 text-xs uppercase tracking-widest text-white/40">{s.label}</div>
+      {/* Arcade Lanes */}
+      <section className="relative mx-auto max-w-[1400px] px-6 pb-20 pt-2">
+        <div className="flex flex-col items-center text-center mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-1.5 mb-6">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 flex items-center gap-2">
+              <span className="text-cyan-400">◆</span> ARCADE - SELECT A LANE
+            </span>
+          </div>
+          
+          <h2 className="font-display text-6xl md:text-[80px] font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] transform -rotate-2">
+            PICK YOUR LANE
+          </h2>
+          
+          <p className="mt-4 max-w-sm text-sm text-white/60 font-medium">
+            Separate arcades. No mixing. Drop a coin, enter the lane, cop the fit before the algo notices.
+          </p>
+          
+          <div className="mt-6 flex items-center gap-2 text-xs font-mono font-bold text-white/40">
+            <span className="text-emerald-400">((•))</span> Live - streetwear-first
+          </div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-10">
+          {/* Polaroid */}
+          <Link 
+            to="/aesthetic/$id"
+            params={{ id: streetwear.id }}
+            className="flex-1 lg:max-w-[500px] lg:mr-auto transform rotate-2 hover:rotate-0 transition-all duration-500 block cursor-pointer"
+          >
+            <div className="bg-[#f8f5ef] p-4 pb-20 rounded-sm shadow-2xl relative">
+              {/* Tape marks */}
+              <div className="absolute -top-4 left-8 w-16 h-8 bg-cyan-400/50 rotate-[-8deg] z-10 backdrop-blur-sm shadow-sm"></div>
+              <div className="absolute -top-3 right-12 w-14 h-8 bg-pink-400/50 rotate-[12deg] z-10 backdrop-blur-sm shadow-sm"></div>
+              
+              <div className="relative overflow-hidden aspect-[3/4] rounded-sm bg-black">
+                <img 
+                  src={streetwear.heroImage} 
+                  alt="Streetwear" 
+                  className="w-full h-full object-cover opacity-90 mix-blend-luminosity hover:mix-blend-normal transition-all duration-700"
+                />
+                
+                {/* Image Overlay Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                
+                <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-sm bg-black/80 border border-white/10 px-3 py-1 backdrop-blur-md">
+                  <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white">MAIN EVENT</span>
+                </div>
+                
+                <div className="absolute bottom-6 left-6 right-6">
+                  <h3 className="font-display text-5xl font-black text-white drop-shadow-lg mb-1">
+                    STREETWEAR
+                  </h3>
+                  <div className="text-[10px] font-mono font-bold text-white/80 uppercase">
+                    SCORE {streetwear.trendScore} - {streetwear.signalCount.toLocaleString()} SIGNALS
+                  </div>
+                </div>
+              </div>
+              
+              <div className="absolute bottom-6 left-0 right-0 text-center font-display text-sm font-bold uppercase tracking-widest text-black/80 group-hover:text-black transition-colors">
+                WHAT WE DO BEST • ENTER &rarr;
+              </div>
             </div>
-          ))}
+          </Link>
+
+          {/* Lanes Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 flex-1 lg:max-w-3xl">
+            {rest.map((lane, i) => {
+              const borderColor = lane.colorPalette[0] || "#fff";
+              const emojis: Record<string, string> = {
+                sneakers: "👟",
+                shirts: "👕",
+                bottoms: "👖",
+                gym: "🏋️‍♂️",
+                watches: "⌚",
+                fragrances: "🧴"
+              };
+              
+              return (
+                <Link 
+                  key={lane.id}
+                  to="/aesthetic/$id"
+                  params={{ id: lane.id }}
+                  className="relative group cursor-pointer flex flex-col items-center justify-center p-10 rounded-2xl bg-[#0a0a0a] border-2 transition-transform duration-300 hover:scale-[1.02] block"
+                  style={{ 
+                    borderColor: borderColor,
+                    boxShadow: `0 0 30px ${borderColor}40, inset 0 0 20px ${borderColor}10` 
+                  }}
+                >
+                  <div className="absolute top-4 left-4 text-[10px] font-mono font-bold tracking-widest text-white/50">
+                    L-0{i+1}
+                  </div>
+                  <div className="absolute top-4 right-4 text-white/30 group-hover:text-white transition-colors">
+                    <ArrowUpRight className="h-4 w-4" />
+                  </div>
+                  
+                  <div className="text-6xl mb-6 filter drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform duration-300 group-hover:scale-110">
+                    {emojis[lane.id] || "✨"}
+                  </div>
+                  
+                  <h3 className="font-display text-xl font-black uppercase tracking-widest text-white">
+                    {lane.name}
+                  </h3>
+                  <div className="mt-2 text-[10px] font-mono font-bold text-white/50">
+                    {lane.signalCount.toLocaleString()} sig
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Aesthetics grid */}
-      <section className="relative mx-auto max-w-7xl px-6 pb-32">
-        <div className="mb-10 flex items-end justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-white/40">
-              <Sparkles className="h-3.5 w-3.5" />
-              Categories
-            </div>
-            <h2 className="mt-2 font-display text-4xl font-semibold tracking-tight text-white md:text-5xl">
-              Pick your lane
-            </h2>
-            <p className="mt-2 max-w-xl text-sm text-white/50">
-              We keep it clean — no mixing. Streetwear is the main event, the rest is on rotation.
-            </p>
-          </div>
-          <div className="hidden items-center gap-2 text-xs text-white/50 md:flex">
-            <Radio className="h-3.5 w-3.5 animate-pulse text-emerald-400" />
-            <span className="font-mono">refreshed 4 min ago</span>
-          </div>
-        </div>
-
-        {/* Featured: Streetwear */}
-        <Link
-          to="/aesthetic/$id"
-          params={{ id: streetwear.id }}
-          className="group relative mb-6 block overflow-hidden rounded-3xl glass"
-        >
-          <div className="absolute inset-0 aesthetic-gradient opacity-40 transition-opacity duration-700 group-hover:opacity-70"
-               style={{
-                 ["--aesthetic-1" as string]: streetwear.colorPalette[0],
-                 ["--aesthetic-2" as string]: streetwear.colorPalette[1],
-                 ["--aesthetic-3" as string]: streetwear.colorPalette[2],
-                 ["--aesthetic-4" as string]: streetwear.colorPalette[3],
-               } as React.CSSProperties}
-          />
-          <div className="absolute left-0 right-0 top-0 z-10 flex h-1">
-            {streetwear.colorPalette.map((c) => (
-              <div key={c} style={{ background: c }} className="flex-1" />
-            ))}
-          </div>
-          <div className="relative grid grid-cols-1 md:grid-cols-2">
-            <div className="relative aspect-[4/3] md:aspect-auto md:min-h-[420px] overflow-hidden">
-              <img
-                src={streetwear.heroImage}
-                alt={streetwear.name}
-                className="h-full w-full object-contain transition-transform duration-[1400ms] group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/80 via-black/20 to-transparent" />
-            </div>
-            <div className="relative flex flex-col justify-between p-8 md:p-10">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
-                  <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shadow-[0_0_10px_#fb923c]" />
-                  main event · what we do best
-                </div>
-                <h3 className="mt-4 font-display text-5xl font-semibold tracking-tight text-white md:text-6xl">
-                  {streetwear.name}
-                </h3>
-                <p className="mt-3 max-w-md text-white/70">{streetwear.description}</p>
-                <div className="mt-5 flex flex-wrap gap-1.5">
-                  {streetwear.vibeTags.map((t) => (
-                    <span key={t} className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-white/80">
-                      #{t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-8 flex items-center justify-between text-xs text-white/50">
-                <span className="font-mono">{streetwear.signalCount.toLocaleString()} signals</span>
-                <span className="inline-flex items-center gap-1.5 text-white/85">
-                  Enter lane <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {rest.map((a, i) => (
-            <AestheticCard key={a.id} aesthetic={a} index={i} />
-          ))}
-        </div>
-      </section>
-
-      <footer className="border-t border-white/5">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-8 text-xs text-white/40">
-          <span>© 2026 TrendXee · AI trend intelligence</span>
-          <span className="font-mono">v0.9.4-beta</span>
-        </div>
+      {/* Footer */}
+      <footer className="mt-auto border-t border-white/10 py-6 text-center text-xs text-white/40 font-mono">
+        &copy; 2026 TrendXee. All rights reserved.
       </footer>
     </div>
   );
 }
+

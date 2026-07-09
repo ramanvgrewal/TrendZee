@@ -7,6 +7,7 @@ import { categoryOptions, getCategoryById } from "@/lib/categories";
 import { getTrendsByCategory } from "@/lib/trends.server";
 import type { Aesthetic, Trend } from "@/lib/mock-data";
 import { aesthetics, paletteVars } from "@/lib/mock-data";
+import { useState, useEffect, useRef } from "react";
 
 const getAestheticPageData = createServerFn({ method: "GET" })
   .validator((categoryId: string) => categoryId)
@@ -17,6 +18,12 @@ const getAestheticPageData = createServerFn({ method: "GET" })
     const aesthetic = aesthetics.find((item) => item.id === category.id) ?? null;
     const trends = await getTrendsByCategory(category.id);
     return { aesthetic, trends };
+  });
+
+const getMoreTrends = createServerFn({ method: "GET" })
+  .validator((data: { categoryId: string; page: number }) => data)
+  .handler(async ({ data }): Promise<Trend[]> => {
+    return await getTrendsByCategory(data.categoryId, data.page);
   });
 
 export const Route = createFileRoute("/aesthetic/$id")({
@@ -46,17 +53,66 @@ export const Route = createFileRoute("/aesthetic/$id")({
 });
 
 function AestheticDetail() {
-  const { aesthetic, trends } = Route.useLoaderData() as {
+  const { aesthetic, trends: initialTrends } = Route.useLoaderData() as {
     aesthetic: Aesthetic;
     trends: Trend[];
   };
   const style = paletteVars(aesthetic.colorPalette);
 
+  const [trends, setTrends] = useState(initialTrends);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(initialTrends.length === 5);
+  const [isLoading, setIsLoading] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setTrends(initialTrends);
+    setPage(0);
+    setHasMore(initialTrends.length === 5);
+  }, [initialTrends, aesthetic.id]);
+
+  const loadMore = async () => {
+    if (isLoading || !hasMore) return;
+    setIsLoading(true);
+    try {
+      const nextPage = page + 1;
+      const newTrends = await getMoreTrends({ data: { categoryId: aesthetic.id, page: nextPage } });
+      if (newTrends.length > 0) {
+        setTrends((prev) => [...prev, ...newTrends]);
+        setPage(nextPage);
+        if (newTrends.length < 5) setHasMore(false);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, page, aesthetic.id]);
+
   return (
     <div className="relative min-h-screen" style={style}>
       <SiteHeader />
 
-      <section className="mx-auto max-w-5xl px-6 pb-8 pt-10">
+      <section className="mx-auto max-w-5xl px-6 pb-8 pt-24">
         <Link
           to="/"
           className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors"
@@ -103,9 +159,9 @@ function AestheticDetail() {
         <p className="mt-3 max-w-2xl text-lg text-white/65">{aesthetic.description}</p>
 
         <div className="mt-5 flex flex-wrap gap-1.5">
-          {aesthetic.vibeTags.map((t) => (
+          {aesthetic.vibeTags.map((t, i) => (
             <span
-              key={t}
+              key={`${t}-${i}`}
               className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/75"
             >
               #{t}
@@ -144,6 +200,16 @@ function AestheticDetail() {
             {trends.map((t) => (
               <TrendCard key={t.id} trend={t} />
             ))}
+            
+            {hasMore && (
+              <div ref={observerTarget} className="flex justify-center py-8">
+                {isLoading ? (
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+                ) : (
+                  <div className="h-6 w-6" />
+                )}
+              </div>
+            )}
           </div>
         )}
       </section>
