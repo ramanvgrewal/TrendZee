@@ -94,7 +94,7 @@ function AestheticDetail() {
               <span className="rounded-full bg-foreground px-2.5 py-1 text-background">Lane {number}</span>
               <span className="inline-flex items-center gap-1.5 text-foreground/60">
                 <Radio className="h-3 w-3" />
-                {aesthetic.signalCount.toLocaleString()} signals
+                {aesthetic.signalCount.toLocaleString('en-US')} signals
               </span>
               <span className="text-foreground/25">·</span>
               <span className="text-[oklch(0.55_0.09_50)]">Score {aesthetic.trendScore}</span>
@@ -143,7 +143,7 @@ function AestheticDetail() {
             </h2>
           </div>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.22em] text-foreground/40 md:inline">
-            {aesthetic.signalCount.toLocaleString()} signals
+            {aesthetic.signalCount.toLocaleString('en-US')} signals
           </span>
         </div>
         {trends.length === 0 ? (
