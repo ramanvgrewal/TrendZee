@@ -127,6 +127,23 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Handle back/forward cache (bfcache) restoration
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        // If the page was restored from the browser's in-memory cache,
+        // force TanStack Router to invalidate and refetch loaders.
+        router.invalidate();
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>
