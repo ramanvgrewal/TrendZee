@@ -1,40 +1,32 @@
-import { createServerFn } from "@tanstack/react-start";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Plug } from "lucide-react";
+import { ArrowLeft, Radio } from "lucide-react";
+import { motion } from "framer-motion";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TrendCard } from "@/components/TrendCard";
-import { categoryOptions, getCategoryById } from "@/lib/categories";
-import { getTrendsByCategory } from "@/lib/trends.server";
-import type { Aesthetic, Trend } from "@/lib/mock-data";
-import { aesthetics, paletteVars } from "@/lib/mock-data";
-import { useState, useEffect, useRef } from "react";
-
-const getAestheticPageData = createServerFn({ method: "GET" })
-  .validator((categoryId: string) => categoryId)
-  .handler(async ({ data }): Promise<{ aesthetic: Aesthetic | null; trends: Trend[] }> => {
-    const category = getCategoryById(data);
-    if (!category) return { aesthetic: null, trends: [] };
-
-    const aesthetic = aesthetics.find((item) => item.id === category.id) ?? null;
-    const trends = await getTrendsByCategory(category.id);
-    return { aesthetic, trends };
-  });
-
-const getMoreTrends = createServerFn({ method: "GET" })
-  .validator((data: { categoryId: string; page: number }) => data)
-  .handler(async ({ data }): Promise<Trend[]> => {
-    return await getTrendsByCategory(data.categoryId, data.page);
-  });
+import type { Aesthetic, Trend, TrendSlice } from "@/lib/mock-data";
+import { aesthetics } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/aesthetic/$id")({
-  loader: async ({
-    params,
-  }: {
-    params: { id: string };
-  }): Promise<{ aesthetic: Aesthetic; trends: Trend[] }> => {
-    const data = await getAestheticPageData({ data: params.id });
-    if (!data.aesthetic) throw notFound();
-    return { aesthetic: data.aesthetic, trends: data.trends };
+  loader: async ({ params }): Promise<{ aesthetic: Aesthetic; trends: Trend[] }> => {
+    const aesthetic = aesthetics.find((a) => a.id === params.id);
+    if (!aesthetic) throw notFound();
+    
+    let queryCategory = params.id;
+    if (params.id === 'upper') queryCategory = 'shirts';
+    else if (params.id === 'gym') queryCategory = 'sportswear';
+    const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:8080';
+    try {
+      const res = await fetch(`${baseUrl}/api/v2/trends?category=${queryCategory}&size=20`);
+      let trends: Trend[] = [];
+      if (res.ok) {
+        const data = await res.json() as TrendSlice;
+        trends = data.content || [];
+      }
+      return { aesthetic, trends };
+    } catch (e) {
+      console.error(e);
+      return { aesthetic, trends: [] };
+    }
   },
   head: ({ loaderData }) => ({
     meta: loaderData
@@ -46,153 +38,125 @@ export const Route = createFileRoute("/aesthetic/$id")({
   }),
   component: AestheticDetail,
   notFoundComponent: () => (
-    <div className="min-h-screen flex items-center justify-center text-white/60">
-      Aesthetic not found
-    </div>
+    <div className="min-h-screen flex items-center justify-center text-foreground/40">Aesthetic not found</div>
   ),
 });
 
 function AestheticDetail() {
-  const { aesthetic, trends: initialTrends } = Route.useLoaderData() as {
+  const { aesthetic, trends } = Route.useLoaderData() as {
     aesthetic: Aesthetic;
     trends: Trend[];
   };
-  const style = paletteVars(aesthetic.colorPalette);
-
-  const [trends, setTrends] = useState(initialTrends);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(initialTrends.length === 5);
-  const [isLoading, setIsLoading] = useState(false);
-  const observerTarget = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setTrends(initialTrends);
-    setPage(0);
-    setHasMore(initialTrends.length === 5);
-  }, [initialTrends, aesthetic.id]);
-
-  const loadMore = async () => {
-    if (isLoading || !hasMore) return;
-    setIsLoading(true);
-    try {
-      const nextPage = page + 1;
-      const newTrends = await getMoreTrends({ data: { categoryId: aesthetic.id, page: nextPage } });
-      if (newTrends.length > 0) {
-        setTrends((prev) => [...prev, ...newTrends]);
-        setPage(nextPage);
-        if (newTrends.length < 5) setHasMore(false);
-      } else {
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasMore, isLoading, page, aesthetic.id]);
+  const laneIndex = aesthetics.findIndex((x) => x.id === aesthetic.id);
+  const number = String(Math.max(laneIndex, 0) + 1).padStart(2, "0");
+  const [firstWord, ...restWords] = aesthetic.name.split(" ");
+  const rest = restWords.join(" ");
 
   return (
-    <div className="relative min-h-screen" style={style}>
+    <div className="relative min-h-screen">
       <SiteHeader />
 
-      <section className="mx-auto max-w-5xl px-6 pb-8 pt-24">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> All aesthetics
-        </Link>
+      <section className="relative mx-auto max-w-7xl px-6 pb-16 pt-10 md:pt-14">
+        <div className="flex flex-wrap items-center gap-6 md:gap-8">
+          <Link
+            to="/"
+            className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-foreground/50 transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> All lanes
+          </Link>
+          
+          <div className="hidden h-3.5 w-px shrink-0 bg-foreground/15 md:block" />
 
-        <div className="mt-6 flex flex-wrap gap-2">
-          {categoryOptions.map((category) => (
-            <Link
-              key={category.id}
-              to="/aesthetic/$id"
-              params={{ id: category.id }}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                category.id === aesthetic.id
-                  ? "border-white/25 bg-white/15 text-white"
-                  : "border-white/10 bg-white/5 text-white/55 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {category.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-xl">
-          <div className="flex gap-1">
-            {aesthetic.colorPalette.map((c) => (
-              <div
-                key={c}
-                style={{ background: c, boxShadow: `0 0 14px ${c}90` }}
-                className="h-2 w-2 rounded-full"
-              />
+          <div className="hidden flex-wrap items-center gap-4 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/40 md:flex">
+            {aesthetics.map((a) => (
+              <Link
+                key={a.id}
+                to="/aesthetic/$id"
+                params={{ id: a.id }}
+                className={`transition-colors hover:text-foreground ${
+                  a.id === aesthetic.id ? "text-foreground font-semibold" : ""
+                }`}
+              >
+                {a.name}
+              </Link>
             ))}
           </div>
-          <span className="text-[11px] uppercase tracking-widest text-white/70">
-            gen-z is wearing this rn · score {aesthetic.trendScore}
-          </span>
         </div>
 
-        <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-white md:text-6xl">
-          {aesthetic.name}
-          <span className="text-gradient">.</span>
-        </h1>
-        <p className="mt-3 max-w-2xl text-lg text-white/65">{aesthetic.description}</p>
+        <div className="mt-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-start gap-6"
+          >
+            <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-foreground/50">
+              <span className="rounded-full bg-foreground px-2.5 py-1 text-background">Lane {number}</span>
+              <span className="inline-flex items-center gap-1.5 text-foreground/60">
+                <Radio className="h-3 w-3" />
+                {aesthetic.signalCount.toLocaleString()} signals
+              </span>
+              <span className="text-foreground/25">·</span>
+              <span className="text-[oklch(0.55_0.09_50)]">Score {aesthetic.trendScore}</span>
+            </div>
 
-        <div className="mt-5 flex flex-wrap gap-1.5">
-          {aesthetic.vibeTags.map((t, i) => (
-            <span
-              key={`${t}-${i}`}
-              className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/75"
-            >
-              #{t}
-            </span>
-          ))}
+            <h1 className="font-display text-[64px] font-bold leading-[0.95] tracking-tight text-foreground md:text-[112px]">
+              {rest ? (
+                <>
+                  {firstWord?.toLowerCase()}
+                  <br />
+                  <em className="font-serif italic font-bold uppercase text-[oklch(0.55_0.09_50)]">
+                    {rest}
+                  </em>
+                </>
+              ) : (
+                <span className="capitalize">{firstWord?.toLowerCase()}</span>
+              )}
+            </h1>
+
+            <p className="max-w-2xl text-lg leading-relaxed text-foreground/60">
+              {aesthetic.description}
+            </p>
+
+            <div className="flex flex-wrap gap-1.5">
+              {aesthetic.vibeTags.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full border border-foreground/15 bg-background px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/60"
+                >
+                  #{t}
+                </span>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 pb-24">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="text-[11px] uppercase tracking-widest text-white/45">
-            Trending drops · {trends.length}
-          </h2>
-          <span className="font-mono text-[11px] text-white/35">
+      <section className="mx-auto max-w-7xl px-6 pb-32">
+        <div className="mb-10 flex items-end justify-between border-t border-foreground/10 pt-10">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/40">
+              The Drops · {trends.length}
+            </div>
+            <h2 className="mt-2 font-display text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+              Trending <em className="italic font-semibold text-[oklch(0.55_0.09_50)]">now</em>.
+            </h2>
+          </div>
+          <span className="hidden font-mono text-[11px] uppercase tracking-[0.22em] text-foreground/40 md:inline">
             {aesthetic.signalCount.toLocaleString()} signals
           </span>
         </div>
         {trends.length === 0 ? (
-          <div className="glass flex flex-col items-center gap-4 rounded-3xl px-6 py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
-              <Plug className="h-5 w-5 text-white/60" />
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-foreground/5 bg-foreground/[0.02] px-6 py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-foreground/10 bg-foreground/5">
+              <span className="text-xl">🔌</span>
             </div>
             <div>
-              <div className="font-display text-xl text-white">No trends found</div>
-              <p className="mx-auto mt-2 max-w-md text-sm text-white/55">
-                Trends will appear here when MongoDB returns documents from the trends collection
-                with underdog, Amazon, and Flipkart product links and images.
+              <div className="font-display text-xl text-foreground">Waiting for the backend</div>
+              <p className="mx-auto mt-2 max-w-md text-sm text-foreground/50">
+                Trends for this aesthetic will appear here once the TrendXee engine
+                is wired up.
               </p>
-            </div>
-            <div className="font-mono text-[11px] uppercase tracking-widest text-white/35">
-              trends.find({`{ category: "${getCategoryById(aesthetic.id)?.id ?? aesthetic.id}" }`})
             </div>
           </div>
         ) : (
@@ -200,19 +164,16 @@ function AestheticDetail() {
             {trends.map((t) => (
               <TrendCard key={t.id} trend={t} />
             ))}
-            
-            {hasMore && (
-              <div ref={observerTarget} className="flex justify-center py-8">
-                {isLoading ? (
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-                ) : (
-                  <div className="h-6 w-6" />
-                )}
-              </div>
-            )}
           </div>
         )}
       </section>
+
+      <footer className="border-t border-foreground/10">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-8 text-xs text-foreground/40">
+          <span>© 2026 TrendXee · trendxee.com</span>
+          <span className="font-mono">v0.9.4-beta</span>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -1,36 +1,55 @@
 import { Link } from "@tanstack/react-router";
-import { TLogo } from "./TLogo";
+import { Zap, Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function SiteHeader() {
+  const [dark, setDark] = useState(true);
+  useEffect(() => {
+    const stored = localStorage.getItem("trendxee-theme");
+    // Default to dark theme; only go light if the user explicitly chose it.
+    const isDark = stored ? stored === "dark" : true;
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("trendxee-theme", next ? "dark" : "light");
+  };
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/40 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4">
-        <div className="flex flex-1 items-center">
-          <Link to="/" className="flex items-center gap-2">
-            <TLogo className="h-6 w-6" />
-            <div className="font-display text-xl font-bold tracking-tight text-white">
-              trend<span className="text-gradient">xee</span>
-            </div>
-          </Link>
-        </div>
+    <header className="sticky top-0 z-50 border-b border-foreground/10 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4">
+        <Link to="/" className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center">
+            <Zap className="h-6 w-6 fill-foreground text-foreground" strokeWidth={1.5} />
+          </span>
+          <div className="font-display text-3xl leading-none tracking-tight text-foreground">
+            <span className="font-bold">Trend</span>
+            <em className="italic font-semibold text-[oklch(0.55_0.09_50)]">Xee</em>
+          </div>
+        </Link>
 
-        <nav className="hidden gap-8 text-sm font-medium text-white/70 md:flex justify-center flex-1">
-          <Link to="/" activeProps={{ className: "text-white" }} className="hover:text-white transition-colors">
-            Aesthetics
+        <nav className="hidden items-center gap-9 text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/70 md:flex">
+          <Link to="/" activeProps={{ className: "text-foreground" }} className="transition-colors hover:text-foreground">
+            Lanes
           </Link>
-          <Link
-            to="/aesthetic/$id"
-            params={{ id: "streetwear" }}
-            activeProps={{ className: "text-white" }}
-            className="hover:text-white transition-colors"
-          >
-            Trends
-          </Link>
+          <a href="#archive" className="transition-colors hover:text-foreground">Archive</a>
+          <a href="#engine" className="transition-colors hover:text-foreground">Engine</a>
+          <a href="#about" className="transition-colors hover:text-foreground">About</a>
         </nav>
 
-        <div className="flex flex-1 items-center justify-end">
-          <button className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-transparent text-white transition-colors hover:bg-white/10">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-foreground/15 bg-background text-foreground transition-transform hover:-translate-y-0.5 hover:shadow-md"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <button className="flex items-center gap-2 rounded-full border border-foreground/15 bg-background py-1 pl-1 pr-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground transition-transform hover:-translate-y-0.5 hover:shadow-md">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground font-display text-xs italic text-background">T</span>
+            Profile
           </button>
         </div>
       </div>

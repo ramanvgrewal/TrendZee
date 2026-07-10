@@ -1,184 +1,318 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Maximize, Filter, Link as LinkIcon, MonitorPlay } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/SiteHeader";
 import { aesthetics } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
+  loader: async () => {
+    const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:8080';
+    const rotationMap: Record<string, { brand: string, title: string, image: string }[]> = {};
+    try {
+      await Promise.all(
+        aesthetics.map(async (a) => {
+          let queryCategory = a.id;
+          if (a.id === 'upper') queryCategory = 'shirts';
+          else if (a.id === 'gym') queryCategory = 'sportswear';
+          const res = await fetch(`${baseUrl}/api/v2/trends?category=${queryCategory}&size=3`);
+          if (res.ok) {
+            const data = await res.json();
+            const trends = data.content || [];
+            rotationMap[a.id] = trends
+              .filter((t: any) => t.signalProducts?.underdog?.imageUrl)
+              .map((t: any) => ({
+                brand: t.signalProducts.underdog.brandName || '',
+                title: t.signalProducts.underdog.title || '',
+                image: t.signalProducts.underdog.imageUrl
+              }));
+          } else {
+             rotationMap[a.id] = [];
+          }
+        })
+      );
+    } catch (e) {
+      console.error("Failed to fetch rotations", e);
+    }
+    return { rotationMap };
+  },
   component: Index,
 });
 
 function Index() {
+  const { rotationMap } = Route.useLoaderData();
+  const laneEmoji: Record<string, string> = {
+    streetwear: "👕",
+    upper: "🎽",
+    sneakers: "👟",
+    bottoms: "👖",
+    accessories: "⛓️",
+    gym: "💪",
+    fragrances: "🧴",
+  };
+
   const streetwear = aesthetics.find((a) => a.id === "streetwear")!;
   const rest = aesthetics.filter((a) => a.id !== "streetwear");
 
   return (
-    <div className="relative min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans">
+    <div className="relative min-h-screen">
       <SiteHeader />
 
       {/* Hero */}
-      <section className="relative mx-auto max-w-[1400px] px-6 pb-2 pt-24 md:pt-28">
-        <motion.div
-          initial={{ opacity: 1, y: 0 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="flex flex-col items-start gap-6 max-w-2xl"
-        >
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3 py-1 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-            <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-100">
-              LIVE FEED
-            </span>
-          </div>
-
-          <h1 className="font-display text-7xl font-black leading-[0.9] tracking-tighter text-white md:text-[100px]">
-            fits before they <br />
-            <span className="text-gradient drop-shadow-[0_0_20px_rgba(244,114,182,0.6)] uppercase italic">
-              go viral.
-            </span>
-          </h1>
-
-          <p className="max-w-xl text-lg text-white/60 leading-relaxed font-medium">
-            TrendXee is the AI-powered feed reading the internet's style pulse —
-            we cluster Reels, TikToks and creator drops into aesthetic movements
-            and hand you the underdog fit before the algorithm does.
-          </p>
-
-          <div className="mt-2 flex flex-wrap items-center gap-4">
-            <Link to="/aesthetic/$id" params={{ id: "streetwear" }} className="group flex items-center gap-2 rounded-full bg-white/10 border border-purple-500/50 px-6 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all hover:bg-white/20">
-              enter the arcade
-              <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </Link>
-            <button onClick={() => alert("we aint spoil the secret sauce")} className="rounded-full border border-white/20 bg-transparent px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10">
-              How the engine works
-            </button>
-          </div>
-          
-          <div className="mt-8 text-[10px] font-mono font-bold tracking-widest text-white/30 uppercase">
-            TRENDXEE.COM - V0.9.4-BETA
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Arcade Lanes */}
-      <section className="relative mx-auto max-w-[1400px] px-6 pb-20 pt-2">
-        <div className="flex flex-col items-center text-center mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-1.5 mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 flex items-center gap-2">
-              <span className="text-cyan-400">◆</span> ARCADE - SELECT A LANE
-            </span>
-          </div>
-          
-          <h2 className="font-display text-6xl md:text-[80px] font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] transform -rotate-2">
-            PICK YOUR LANE
-          </h2>
-          
-          <p className="mt-4 max-w-sm text-sm text-white/60 font-medium">
-            Separate arcades. No mixing. Drop a coin, enter the lane, cop the fit before the algo notices.
-          </p>
-          
-          <div className="mt-6 flex items-center gap-2 text-xs font-mono font-bold text-white/40">
-            <span className="text-emerald-400">((•))</span> Live - streetwear-first
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-10">
-          {/* Polaroid */}
-          <Link 
-            to="/aesthetic/$id"
-            params={{ id: streetwear.id }}
-            className="flex-1 lg:max-w-[500px] lg:mr-auto transform rotate-2 hover:rotate-0 transition-all duration-500 block cursor-pointer"
+      <section className="relative mx-auto max-w-7xl px-6 pb-24 pt-14 md:pt-20">
+        <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+          {/* Left column */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-start gap-7"
           >
-            <div className="bg-[#f8f5ef] p-4 pb-20 rounded-sm shadow-2xl relative">
-              {/* Tape marks */}
-              <div className="absolute -top-4 left-8 w-16 h-8 bg-cyan-400/50 rotate-[-8deg] z-10 backdrop-blur-sm shadow-sm"></div>
-              <div className="absolute -top-3 right-12 w-14 h-8 bg-pink-400/50 rotate-[12deg] z-10 backdrop-blur-sm shadow-sm"></div>
-              
-              <div className="relative overflow-hidden aspect-[3/4] rounded-sm bg-black">
-                <img 
-                  src={streetwear.heroImage} 
-                  alt="Streetwear" 
-                  className="w-full h-full object-cover opacity-90 mix-blend-luminosity hover:mix-blend-normal transition-all duration-700"
-                />
-                
-                {/* Image Overlay Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-                
-                <div className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-sm bg-black/80 border border-white/10 px-3 py-1 backdrop-blur-md">
-                  <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white">MAIN EVENT</span>
-                </div>
-                
-                <div className="absolute bottom-6 left-6 right-6">
-                  <h3 className="font-display text-5xl font-black text-white drop-shadow-lg mb-1">
-                    STREETWEAR
-                  </h3>
-                  <div className="text-[10px] font-mono font-bold text-white/80 uppercase">
-                    SCORE {streetwear.trendScore} - {streetwear.signalCount.toLocaleString()} SIGNALS
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute bottom-6 left-0 right-0 text-center font-display text-sm font-bold uppercase tracking-widest text-black/80 group-hover:text-black transition-colors">
-                WHAT WE DO BEST • ENTER &rarr;
-              </div>
-            </div>
-          </Link>
+            <LiveBadge signals={streetwear.signalCount} />
 
-          {/* Lanes Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 flex-1 lg:max-w-3xl">
-            {rest.map((lane, i) => {
-              const borderColor = lane.colorPalette[0] || "#fff";
-              const emojis: Record<string, string> = {
-                sneakers: "👟",
-                shirts: "👕",
-                bottoms: "👖",
-                gym: "🏋️‍♂️",
-                watches: "⌚",
-                fragrances: "🧴"
-              };
-              
-              return (
-                <Link 
-                  key={lane.id}
-                  to="/aesthetic/$id"
-                  params={{ id: lane.id }}
-                  className="relative group cursor-pointer flex flex-col items-center justify-center p-10 rounded-2xl bg-[#0a0a0a] border-2 transition-transform duration-300 hover:scale-[1.02] block"
-                  style={{ 
-                    borderColor: borderColor,
-                    boxShadow: `0 0 30px ${borderColor}40, inset 0 0 20px ${borderColor}10` 
-                  }}
-                >
-                  <div className="absolute top-4 left-4 text-[10px] font-mono font-bold tracking-widest text-white/50">
-                    L-0{i+1}
-                  </div>
-                  <div className="absolute top-4 right-4 text-white/30 group-hover:text-white transition-colors">
-                    <ArrowUpRight className="h-4 w-4" />
-                  </div>
-                  
-                  <div className="text-6xl mb-6 filter drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform duration-300 group-hover:scale-110">
-                    {emojis[lane.id] || "✨"}
-                  </div>
-                  
-                  <h3 className="font-display text-xl font-black uppercase tracking-widest text-white">
-                    {lane.name}
-                  </h3>
-                  <div className="mt-2 text-[10px] font-mono font-bold text-white/50">
-                    {lane.signalCount.toLocaleString()} sig
-                  </div>
-                </Link>
-              );
-            })}
+            <h1 className="font-display text-[64px] font-bold leading-[0.95] tracking-tight text-foreground md:text-[96px]">
+              Fits before they
+              <br />
+              <em className="font-serif italic font-bold uppercase text-[oklch(0.55_0.09_50)]">
+                Go Viral.
+              </em>
+            </h1>
+
+            <p className="max-w-md text-base leading-relaxed text-foreground/60">
+              TrendXee clusters millions of creator signals into aesthetic
+              movements and finds the underdog fit before the algorithm does.
+            </p>
+
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <Link
+                to="/aesthetic/$id"
+                params={{ id: "streetwear" }}
+                className="group inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-background shadow-[0_10px_30px_-10px_oklch(0.22_0.03_35/60%)] transition-transform hover:-translate-y-0.5"
+              >
+                Explore Lanes
+                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </Link>
+              <button className="rounded-full border border-foreground/20 bg-background px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-foreground transition-colors hover:border-foreground/40">
+                How It Works
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Polaroid */}
+          <HeroPolaroid a={streetwear} />
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section id="archive" className="relative mx-auto max-w-7xl px-6 pb-32">
+        <div className="mb-10 flex items-end justify-between border-t border-foreground/10 pt-10">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/40">
+              The Collection
+            </div>
+            <h2 className="mt-2 font-display text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+              Curated <em className="italic font-semibold text-[oklch(0.55_0.09_50)]">lanes</em>.
+            </h2>
+          </div>
+          <Link
+            to="/aesthetic/$id"
+            params={{ id: "streetwear" }}
+            className="hidden items-center gap-2 rounded-full border border-foreground/20 bg-background px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-foreground transition-colors hover:border-foreground/40 md:inline-flex"
+          >
+            View all lanes
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        {/* Horizontal numbered lane rail */}
+        <div className="-mx-6 overflow-x-auto px-6 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-4">
+            {[streetwear, ...rest].map((a, i) => (
+              <LaneCard
+                key={a.id}
+                a={a}
+                rotationImages={rotationMap?.[a.id]?.length ? rotationMap[a.id] : (a.underdogRotation || [])}
+                emoji={laneEmoji[a.id] ?? "✦"}
+                index={i}
+                number={String(i + 1).padStart(2, "0")}
+              />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-white/10 py-6 text-center text-xs text-white/40 font-mono">
-        &copy; 2026 TrendXee. All rights reserved.
+      <footer className="border-t border-foreground/10">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-8 text-xs text-foreground/40">
+          <span>© 2026 TrendXee · trendxee.com</span>
+          <span className="font-mono">v0.9.4-beta</span>
+        </div>
       </footer>
     </div>
   );
 }
 
+function LiveBadge({ signals }: { signals: number }) {
+  return (
+    <div className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground/70">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-background px-2.5 py-1 ring-1 ring-foreground/15">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[oklch(0.65_0.15_240)] opacity-75" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[oklch(0.65_0.15_240)]" />
+        </span>
+        Live
+      </span>
+      <span className="text-foreground/50 normal-case tracking-normal">
+        Reading <span className="font-mono text-foreground/80">{signals.toLocaleString()}</span> signals
+      </span>
+      <span className="flex h-3 items-end gap-[2px]">
+        {[6, 10, 4, 12, 7, 9, 5].map((h, i) => (
+          <span
+            key={i}
+            className="w-[2px] rounded-sm bg-[oklch(0.65_0.15_240)]"
+            style={{
+              height: `${h}px`,
+              animation: `waveform 1.2s ease-in-out ${i * 0.1}s infinite alternate`,
+            }}
+          />
+        ))}
+      </span>
+      <style>{`@keyframes waveform { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }`}</style>
+    </div>
+  );
+}
+
+function HeroPolaroid({ a }: { a: (typeof aesthetics)[number] }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24, rotate: -1 }}
+      animate={{ opacity: 1, y: 0, rotate: 2.5 }}
+      transition={{ duration: 0.7, ease: [0.2, 0.7, 0.2, 1] }}
+      className="relative mx-auto w-full max-w-md"
+    >
+      {/* Tape */}
+      <span className="absolute -top-4 left-1/2 z-10 h-8 w-24 -translate-x-1/2 rotate-[-4deg] rounded-sm bg-[oklch(0.72_0.09_55/85%)] shadow-md" />
+
+      <Link
+        to="/aesthetic/$id"
+        params={{ id: a.id }}
+        className="group block rounded-[6px] bg-[oklch(0.97_0.008_75)] p-3 shadow-[0_30px_60px_-25px_oklch(0.22_0.03_35/45%)] transition-transform duration-500 hover:-translate-y-1 hover:rotate-0"
+      >
+        <div className="relative overflow-hidden">
+          <img
+            src={a.heroImage}
+            alt={a.name}
+            className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+          />
+        </div>
+        <div className="flex items-end justify-between px-2 pt-4 pb-2">
+          <div>
+            <div className="border-b-2 border-foreground/80 pb-1 font-display text-sm font-bold uppercase tracking-[0.2em] text-foreground">
+              {a.name}
+            </div>
+            <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/50">
+              {a.signalCount.toLocaleString()} signals
+            </div>
+          </div>
+          <div className="flex items-end gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/60">
+            Score
+            <span className="font-display text-2xl italic font-bold text-[oklch(0.55_0.09_50)]">
+              {a.trendScore}
+            </span>
+          </div>
+        </div>
+      </Link>
+
+      <span className="pointer-events-none absolute -bottom-2 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background">
+        <ArrowUpRight className="h-4 w-4" />
+      </span>
+    </motion.div>
+  );
+}
+
+function LaneCard({
+  a,
+  rotationImages,
+  emoji,
+  index,
+  number,
+}: {
+  a: (typeof aesthetics)[number];
+  rotationImages: { brand: string; title: string; image: string }[];
+  emoji: string;
+  index: number;
+  number: string;
+}) {
+  const rotation = rotationImages;
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (rotation.length < 2) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % rotation.length), 2800 + index * 300);
+    return () => clearInterval(t);
+  }, [rotation.length, index]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      className="w-[260px] shrink-0 sm:w-[280px]"
+    >
+      <Link
+        to="/aesthetic/$id"
+        params={{ id: a.id }}
+        className="group relative block overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02] transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-20px_oklch(0.30_0.04_40/40%)]"
+      >
+        <div className="relative aspect-[3/4] overflow-hidden bg-foreground/5">
+          {rotation.length > 0 ? (
+            rotation.map((r, i) => (
+              <img
+                key={r.image}
+                src={r.image}
+                alt={r.title}
+                loading="lazy"
+                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+                  i === idx ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            ))
+          ) : (
+            <img
+              src={a.heroImage}
+              alt={a.name}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              loading="lazy"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.15_0.02_35/95%)] via-[oklch(0.15_0.02_35/30%)] to-transparent" />
+
+          {/* number */}
+          <div className="absolute left-4 top-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[oklch(0.96_0.015_75/80%)]">
+            {number}
+          </div>
+
+          {/* emoji chip */}
+          <div className="absolute right-3 top-3">
+            <span
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-sm shadow-sm"
+              style={{ background: "oklch(0.955 0.012 75 / 95%)" }}
+            >
+              {emoji}
+            </span>
+          </div>
+
+          {/* bottom info */}
+          <div className="absolute inset-x-0 bottom-0 p-4">
+            <h3 className="font-display text-2xl font-bold capitalize text-[oklch(0.97_0.015_75)]">
+              {a.name.toLowerCase()}
+            </h3>
+            <div className="mt-1 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-[oklch(0.97_0.015_75/70%)]">
+              <span>{a.signalCount.toLocaleString()} signals</span>
+              <span className="text-[oklch(0.78_0.10_55)]">score {a.trendScore}</span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
