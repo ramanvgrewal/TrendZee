@@ -8,7 +8,7 @@ import { aesthetics } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:8080';
+    const baseUrl = typeof window !== 'undefined' ? '' : 'https://api.trendxee.com';
     const rotationMap: Record<string, { brand: string, title: string, image: string }[]> = {};
     try {
       await Promise.all(

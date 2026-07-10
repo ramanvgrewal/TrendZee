@@ -14,7 +14,7 @@ export const Route = createFileRoute("/aesthetic/$id")({
     let queryCategory = params.id;
     if (params.id === 'upper') queryCategory = 'shirts';
     else if (params.id === 'gym') queryCategory = 'sportswear';
-    const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:8080';
+    const baseUrl = typeof window !== 'undefined' ? '' : 'https://api.trendxee.com';
     try {
       const res = await fetch(`${baseUrl}/api/v2/trends?category=${queryCategory}&size=20`);
       let trends: Trend[] = [];
