@@ -48,10 +48,28 @@ public class CookieUtils {
     }
 
     public static String serialize(Object object) {
-        return Base64.getUrlEncoder().encodeToString(SerializationUtils.serialize(object));
+        try {
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            try (java.util.zip.GZIPOutputStream gzipOut = new java.util.zip.GZIPOutputStream(baos);
+                 java.io.ObjectOutputStream objectOut = new java.io.ObjectOutputStream(gzipOut)) {
+                objectOut.writeObject(object);
+            }
+            return Base64.getUrlEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize object", e);
+        }
     }
 
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
-        return cls.cast(SerializationUtils.deserialize(Base64.getUrlDecoder().decode(cookie.getValue())));
+        try {
+            byte[] decoded = Base64.getUrlDecoder().decode(cookie.getValue());
+            java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(decoded);
+            try (java.util.zip.GZIPInputStream gzipIn = new java.util.zip.GZIPInputStream(bais);
+                 java.io.ObjectInputStream objectIn = new java.io.ObjectInputStream(gzipIn)) {
+                return cls.cast(objectIn.readObject());
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
