@@ -11,7 +11,7 @@ const sourceLabels: Record<Source, string> = {
 };
 
 const trackClick = (trendId: string, source: Source, url: string) => {
-  const baseUrl = import.meta.env?.VITE_API_BASE_URL || (typeof process !== 'undefined' && process.env.VITE_API_BASE_URL) || (import.meta.env?.DEV ? "http://localhost:8080" : "");
+  const baseUrl = import.meta.env?.VITE_API_BASE_URL || (typeof process !== 'undefined' && process.env.VITE_API_BASE_URL) || (import.meta.env?.DEV ? "http://localhost:8080" : "https://api.trendxee.com");
   const token = localStorage.getItem("token");
   
   const headers: HeadersInit = {
