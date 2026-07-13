@@ -26,10 +26,8 @@ public class CookieUtils {
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge(maxAge);
-        // Important: Use Secure in production. We can just rely on the proxy if needed, 
-        // but it's safe to set it if we know we are on HTTPS. 
-        // For simplicity, letting Spring/Tomcat handle Secure flag via proxy config is okay,
-        // or we can explicitly set it to true if X-Forwarded-Proto is https.
+        cookie.setSecure(true);
+        cookie.setAttribute("SameSite", "None");
         response.addCookie(cookie);
     }
 
