@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.playwright.ElementHandle;
 import com.microsoft.playwright.Page;
+import com.trendzy.ingestion.scraper.util.PriceUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -126,7 +127,6 @@ public class GenericParser {
         if (url != null && !url.startsWith("http")) {
             url = baseUrl.replaceAll("/+$", "") + (url.startsWith("/") ? url : "/" + url);
         }
-        if (url == null) url = baseUrl;
 
         String imageUrl = extractImageUrl(node);
 
@@ -141,10 +141,7 @@ public class GenericParser {
 
             if (offer.has("priceCurrency")) {
                 String ccy = offer.path("priceCurrency").asText("").toUpperCase();
-                if ("USD".equals(ccy)) currency = "$";
-                else if ("EUR".equals(ccy)) currency = "€";
-                else if ("GBP".equals(ccy)) currency = "£";
-                else if ("INR".equals(ccy)) currency = "Rs.";
+                currency = PriceUtil.detectCurrency(ccy);
             }
 
             price = parsePrice(offer.path("price").asText(null));
@@ -176,12 +173,7 @@ public class GenericParser {
     }
 
     private Double parsePrice(String priceStr) {
-        if (priceStr == null || priceStr.isBlank()) return null;
-        try {
-            return Double.parseDouble(priceStr.replaceAll("[^0-9.]", ""));
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        return PriceUtil.parsePrice(priceStr);
     }
 
     // ── Wix-Specific Extraction ───────────────────────────────────────
@@ -266,8 +258,8 @@ public class GenericParser {
             try {
                 ElementHandle el = parent.querySelector(sel);
                 if (el != null) {
-                    String text = el.innerText().replaceAll("[^0-9.]", "");
-                    if (!text.isBlank()) return Double.parseDouble(text);
+                    Double p = PriceUtil.parsePrice(el.innerText());
+                    if (p != null) return p;
                 }
             } catch (Exception ignored) {}
         }
@@ -279,11 +271,7 @@ public class GenericParser {
             try {
                 ElementHandle el = parent.querySelector(sel);
                 if (el != null) {
-                    String text = el.innerText();
-                    if (text.contains("$")) return "$";
-                    if (text.contains("€")) return "€";
-                    if (text.contains("£")) return "£";
-                    if (text.contains("₹") || text.toLowerCase().contains("rs")) return "Rs.";
+                    return PriceUtil.detectCurrency(el.innerText());
                 }
             } catch (Exception ignored) {}
         }
@@ -291,6 +279,16 @@ public class GenericParser {
     }
 
     private String extractFirstHref(ElementHandle parent, String baseUrl, String... selectors) {
+        try {
+            Object tagName = parent.evaluate("el => el.tagName");
+            if ("A".equalsIgnoreCase(String.valueOf(tagName))) {
+                String href = parent.getAttribute("href");
+                if (href != null && !href.isBlank()) {
+                    return resolveUrl(href, baseUrl);
+                }
+            }
+        } catch (Exception ignored) {}
+
         for (String sel : selectors) {
             try {
                 ElementHandle el = parent.querySelector(sel);
@@ -302,7 +300,18 @@ public class GenericParser {
                 }
             } catch (Exception ignored) {}
         }
-        return baseUrl;
+        
+        try {
+            ElementHandle el = parent.querySelector("a[href]");
+            if (el != null) {
+                String href = el.getAttribute("href");
+                if (href != null && !href.isBlank()) {
+                    return resolveUrl(href, baseUrl);
+                }
+            }
+        } catch (Exception ignored) {}
+        
+        return null;
     }
 
     private String extractWixImage(ElementHandle element, String baseUrl) {
@@ -371,13 +380,9 @@ public class GenericParser {
                     ElementHandle priceEl = element.querySelector(sel);
                     if (priceEl != null) {
                         String priceText = priceEl.innerText();
-                        if (priceText.contains("$")) currency = "$";
-                        else if (priceText.contains("€")) currency = "€";
-                        else if (priceText.contains("£")) currency = "£";
-                        else if (priceText.contains("₹") || priceText.toLowerCase().contains("rs")) currency = "Rs.";
-
-                        String priceStr = priceText.replaceAll("[^0-9.]", "");
-                        if (!priceStr.isBlank()) { price = Double.parseDouble(priceStr); break; }
+                        currency = PriceUtil.detectCurrency(priceText);
+                        price = PriceUtil.parsePrice(priceText);
+                        if (price != null) break;
                     }
                 }
 
@@ -385,16 +390,40 @@ public class GenericParser {
                 ElementHandle oldPriceEl = element.querySelector(
                         "del, s, strike, .old-price, .original-price, [class*='compare'], [class*='was'], [class*='mrp']");
                 if (oldPriceEl != null) {
-                    String oldPriceStr = oldPriceEl.innerText().replaceAll("[^0-9.]", "");
-                    if (!oldPriceStr.isBlank()) originalPrice = Double.parseDouble(oldPriceStr);
+                    originalPrice = PriceUtil.parsePrice(oldPriceEl.innerText());
                 }
                 if (originalPrice == null) originalPrice = price;
 
-                String url = baseUrl;
-                ElementHandle linkEl = element.querySelector("a[href*='/product'], a[href*='/shop'], a");
+                // URL
+                String url = null;
+                // Look for product specific links first
+                ElementHandle linkEl = element.querySelector("a[href*='/product'], a[href*='/shop'], a[href*='/item'], a[href*='/p/']");
+                
+                // If not found, try a link wrapping the image
+                if (linkEl == null) {
+                    linkEl = element.querySelector("a:has(img)");
+                }
+                
+                // If still not found, just take the first anchor with a href that's not just "#" or "/"
+                if (linkEl == null) {
+                    List<ElementHandle> anchors = element.querySelectorAll("a[href]");
+                    for (ElementHandle a : anchors) {
+                        String href = a.getAttribute("href");
+                        if (href != null && !href.isBlank() && !href.equals("/") && !href.equals("#") && !href.startsWith("javascript")) {
+                            linkEl = a;
+                            break;
+                        }
+                    }
+                }
+                
                 if (linkEl != null) {
                     String href = linkEl.getAttribute("href");
                     if (href != null) url = resolveUrl(href, baseUrl);
+                }
+                
+                // Reject if we couldn't find an exact product link (url is null or just the base url)
+                if (url == null || url.equalsIgnoreCase(baseUrl) || url.equalsIgnoreCase(baseUrl + "/")) {
+                    continue;
                 }
 
                 String imageUrl = extractImageFromElement(element, baseUrl);
@@ -519,10 +548,7 @@ public class GenericParser {
                     Double price = parsePrice(text);
                     if (price == null) continue; // Must have a parseable price
 
-                    String currency = "Rs.";
-                    if (text.contains("$")) currency = "$";
-                    else if (text.contains("€")) currency = "€";
-                    else if (text.contains("£")) currency = "£";
+                    String currency = PriceUtil.detectCurrency(text);
 
                     String url = resolveUrl(href, baseUrl);
                     String imageUrl = extractImageFromElement(linkEl, baseUrl);

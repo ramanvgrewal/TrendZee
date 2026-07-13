@@ -78,10 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "TrendXee — AI Fashion Trend Intelligence" },
-      { name: "description", content: "Real-time fashion trend clusters, momentum signals and a shoppable product triad — powered by AI." },
+      {
+        name: "description",
+        content:
+          "Real-time fashion trend clusters, momentum signals and a shoppable product triad — powered by AI.",
+      },
       { name: "author", content: "TrendXee" },
       { property: "og:title", content: "TrendXee — AI Fashion Trend Intelligence" },
-      { property: "og:description", content: "Discover aesthetic clusters, momentum-scored micro-trends and a curated shoppable feed built by AI." },
+      {
+        property: "og:description",
+        content:
+          "Discover aesthetic clusters, momentum-scored micro-trends and a curated shoppable feed built by AI.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@trendxee" },
@@ -140,8 +148,29 @@ function RootComponent() {
     };
 
     window.addEventListener("pageshow", handlePageShow);
+    
+    // Global fetch interceptor to attach JWT
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const [resource, config] = args;
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        if (typeof resource === 'string' && resource.includes(import.meta.env?.VITE_API_BASE_URL || (import.meta.env?.DEV ? 'localhost:8080' : '/api/'))) {
+          const newConfig = { ...config } as RequestInit;
+          newConfig.headers = {
+            ...newConfig.headers,
+            'Authorization': `Bearer ${token}`
+          };
+          return originalFetch(resource, newConfig);
+        }
+      }
+      return originalFetch(...args);
+    };
+
     return () => {
       window.removeEventListener("pageshow", handlePageShow);
+      window.fetch = originalFetch; // Restore original fetch
     };
   }, [router]);
 

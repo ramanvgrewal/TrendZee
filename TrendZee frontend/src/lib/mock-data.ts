@@ -10,63 +10,44 @@ export interface Aesthetic {
   underdogRotation?: { brand: string; title: string; image: string }[];
 }
 
-export interface ProductDetail {
+export interface ProductMatch {
   brandName: string;
   title: string;
-  currency: string;
   price: number;
-  originalPrice?: number;
-  shopUrl: string;
+  currency: string;
   imageUrl: string;
-  codAvailable?: boolean;
+  shopUrl: string;
 }
 
-export interface SignalProducts {
+export interface ProductTriad {
+  underdog: ProductMatch;
+  amazon: ProductMatch;
+  flipkart: ProductMatch;
+}
+
+export interface SignalProduct extends ProductTriad {
   signalId: string;
   authorUsername: string;
   queryUsed: string;
-  underdog: ProductDetail | null;
-  amazon: ProductDetail | null;
-  flipkart: ProductDetail | null;
 }
 
 export interface Trend {
   id: string;
-  trendName: string;
-  category: string;
-  subcategory: string;
+  name: string;
+  aestheticId: string;
   trendScore: number;
-  tier: string;
   vibeTags: string[];
   aiSummary: string;
   whyTrending: string[];
-  indiaRelevanceNote: string;
   indiaRelevant: boolean;
   totalSignals: number;
-  supportingSignalIds: string[];
-  enrichmentStatus: string;
-  enrichmentQuery: string;
-  aiBrandNames: string[];
-  signalProducts: SignalProducts;
+  supportingSignals: string[];
+  enrichmentStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+  products: ProductTriad;
+  signalProducts: SignalProduct[];
   estimatedPrice: number;
-  currency: string;
-  firstDetectedAt: string;
   lastUpdatedAt: string;
   active: boolean;
-}
-
-export interface TrendSlice {
-  content: Trend[];
-  pageable: any;
-  last: boolean;
-  totalPages: number;
-  totalElements: number;
-  size: number;
-  number: number;
-  sort: any;
-  first: boolean;
-  numberOfElements: number;
-  empty: boolean;
 }
 
 export const aesthetics: Aesthetic[] = [
@@ -80,9 +61,8 @@ export const aesthetics: Aesthetic[] = [
     heroImage: "https://images.unsplash.com/photo-1523398002811-999ca8dec234?w=1400&q=80",
     vibeTags: ["baggy", "layered", "graphic", "underdog"],
     underdogRotation: [
-      { brand: "Bluorng", title: "Washed Baggy Carpenter", image: "https://images.unsplash.com/photo-1584865288642-42078afe6942?w=800&q=80" },
-      { brand: "Almost Gods", title: "Boxy Acid-Wash Tee", image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800&q=80" },
-      { brand: "Jaywalking", title: "Heavyweight Zipper", image: "https://images.unsplash.com/photo-1523398002811-999ca8dec234?w=800&q=80" }
+      { brand: "Bluorng", title: "Faded Indigo Carpenter Jean — Low Rise", image: "https://images.unsplash.com/photo-1584865288642-42078afe6942?w=800&q=80" },
+      { brand: "Almost Gods", title: "Acid-Wash Racing Boxy Tee — Bleached Black", image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800&q=80" },
     ],
   },
   {
@@ -177,7 +157,106 @@ export const aesthetics: Aesthetic[] = [
   },
 ];
 
+export const trends: Trend[] = [
+  {
+    id: "trend_sw_001",
+    name: "Washed Baggy Carpenter Denim",
+    aestheticId: "streetwear",
+    trendScore: 94,
+    vibeTags: ["baggy", "carpenter", "washed", "stacked"],
+    aiSummary:
+      "Loose carpenter jeans in dusty mid-wash indigo are eating the fit-check feed this week. Creators are stacking them over chunky sneakers with boxy graphic tees — the silhouette reads skate-shop meets 2003 Y2K, not TikTok-core Y2K. The winning cut sits low on the hips, breaks hard at the ankle, and always shows a hammer loop.",
+    whyTrending: [
+      "3 top creators posted haul reels in the last 7 days.",
+      "Amazon India search up 68% month-over-month.",
+    ],
+    indiaRelevant: true,
+    totalSignals: 214,
+    supportingSignals: Array.from({ length: 18 }, (_, i) => `sig_${i}`),
+    enrichmentStatus: "COMPLETED",
+    estimatedPrice: 2499,
+    lastUpdatedAt: "2026-07-08T09:12:00Z",
+    active: true,
+    products: {
+      underdog: {
+        brandName: "Bluorng",
+        title: "Faded Indigo Carpenter Jean — Low Rise",
+        price: 3499,
+        currency: "₹",
+        imageUrl: "https://images.unsplash.com/photo-1584865288642-42078afe6942?w=800&q=80",
+        shopUrl: "#",
+      },
+      amazon: {
+        brandName: "Levi's",
+        title: "568 Loose Straight Carpenter Jean — Stonewash",
+        price: 2799,
+        currency: "₹",
+        imageUrl: "https://images.unsplash.com/photo-1602293589930-45aad59ba3ab?w=800&q=80",
+        shopUrl: "#",
+      },
+      flipkart: {
+        brandName: "Roadster",
+        title: "Baggy Fit Cotton Carpenter Jeans — Light Blue",
+        price: 1499,
+        currency: "₹",
+        imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&q=80",
+        shopUrl: "#",
+      },
+    },
+    signalProducts: [],
+  },
+  {
+    id: "trend_sw_002",
+    name: "Boxy Acid-Wash Graphic Tee",
+    aestheticId: "streetwear",
+    trendScore: 89,
+    vibeTags: ["boxy", "acid-wash", "graphic", "vintage"],
+    aiSummary:
+      "Short, wide, boxy tees in bleached acid-wash finishes with faded band-tour or racing graphics are the new default top-layer. The cut is deliberately cropped — hitting mid-belt on baggy denim — and the wash reads 'thrifted 2004', not 'AI-generated print'. Best paired with a plain white long sleeve underneath.",
+    whyTrending: [
+      "TikTok #boxytee saw a 3.2x view spike in 14 days.",
+      "41% of carpenter-denim reels pair it with an acid-wash top.",
+    ],
+    indiaRelevant: true,
+    totalSignals: 176,
+    supportingSignals: Array.from({ length: 12 }, (_, i) => `sig2_${i}`),
+    enrichmentStatus: "COMPLETED",
+    estimatedPrice: 1299,
+    lastUpdatedAt: "2026-07-08T06:40:00Z",
+    active: true,
+    products: {
+      underdog: {
+        brandName: "Almost Gods",
+        title: "Acid-Wash Racing Boxy Tee — Bleached Black",
+        price: 1899,
+        currency: "₹",
+        imageUrl: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800&q=80",
+        shopUrl: "#",
+      },
+      amazon: {
+        brandName: "H&M",
+        title: "Boxy Fit Washed Graphic T-Shirt — Vintage Blue",
+        price: 999,
+        currency: "₹",
+        imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&q=80",
+        shopUrl: "#",
+      },
+      flipkart: {
+        brandName: "Bewakoof",
+        title: "Oversized Acid Wash Printed Tee — Faded Grey",
+        price: 649,
+        currency: "₹",
+        imageUrl: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800&q=80",
+        shopUrl: "#",
+      },
+    },
+    signalProducts: [],
+  },
+];
 
+export function getTrendsForAesthetic(aestheticId: string): Trend[] {
+  return trends.filter((t) => t.aestheticId === aestheticId);
+}
 
 export function paletteVars(palette: string[]): React.CSSProperties {
   const [a, b, c, d] = [...palette, ...palette].slice(0, 4);

@@ -5,7 +5,7 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 @Configuration
-@EnableMongoRepositories(basePackages = "com.trendzy.ingestion.repository")
+@EnableMongoRepositories(basePackages = {"com.trendzy.ingestion.repository", "com.trendzy.security", "com.trendzy.analytics"})
 @EnableMongoAuditing
 public class MongoConfig {
 }

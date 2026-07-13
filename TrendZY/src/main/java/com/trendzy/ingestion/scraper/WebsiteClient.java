@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
+import java.util.Set;
 
 @Component
 @Slf4j
@@ -19,17 +20,27 @@ public class WebsiteClient {
     private final GenericParser genericParser;
 
     private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                    "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                    "Chrome/120.0.0.0 Safari/537.36";
-    private static final int LOAD_TIMEOUT = 30_000;
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    + "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/120.0.0.0 Safari/537.36";
+
+    private static final String USER_AGENT_ALT =
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    + "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/122.0.0.0 Safari/537.36";
+
+    private static final int LOAD_TIMEOUT_DEFAULT = 30_000;
+    private static final int LOAD_TIMEOUT_EXTENDED = 45_000;
     private static final int MAX_PRODUCTS = 50;
 
     private static final List<String> AGGREGATOR_DOMAINS = List.of(
             "linktr.ee", "beacons.ai", "solo.to", "bio.site", "bio.link", "campsite.bio", "hoo.be", "linkpop"
     );
-    private static final List<String> MARKETPLACE_DOMAINS = List.of(
-            "amazon.", "flipkart.", "myntra.", "ajio.", "meesho.", "snapdeal."
+    private static final List<String> IGNORED_DOMAINS = List.of(
+            "amazon.", "flipkart.", "myntra.", "ajio.", "meesho.", "snapdeal.",
+            "stock.adobe.com", "adobe.com", "shutterstock.com", "behance.net", "dribbble.com", "pinterest.com",
+            "freepik.com", "gettyimages.com", "unsplash.com", "pexels.com", "pixabay.com", "istockphoto.com",
+            "wishlink.com"
     );
     private static final List<String> SHOPIFY_SIGNALS = List.of(
             "cdn.shopify.com", "myshopify.com", "Shopify.theme", "/cart.js", "window.Shopify"
@@ -40,6 +51,24 @@ public class WebsiteClient {
     );
     private static final List<String> WOOCOMMERCE_SIGNALS = List.of(
             "wp-content", "wc-cart", "woocommerce", "wc-blocks", "wp-json/wc"
+    );
+
+    // Domains to block during page load — analytics, ads, chat widgets
+    private static final Set<String> BLOCKED_RESOURCE_DOMAINS = Set.of(
+            "google-analytics.com", "www.google-analytics.com",
+            "googletagmanager.com", "www.googletagmanager.com",
+            "connect.facebook.net", "www.facebook.com",
+            "px.ads.linkedin.com", "snap.licdn.com",
+            "doubleclick.net", "googlesyndication.com",
+            "hotjar.com", "static.hotjar.com", "script.hotjar.com",
+            "clarity.ms", "www.clarity.ms",
+            "tawk.to", "embed.tawk.to",
+            "crisp.chat", "client.crisp.chat",
+            "widget.intercom.io", "js.intercom.com",
+            "cdn.onesignal.com",
+            "bat.bing.com", "ct.pinterest.com",
+            "analytics.tiktok.com", "sc-static.net",
+            "tr.snapchat.com", "ads-twitter.com"
     );
 
     // Common "all products" page paths — tried in order when initial page yields no products
@@ -63,10 +92,28 @@ public class WebsiteClient {
             log.warn("[WEBSITE] normalizeInputUrl returned null for @{}", brandName);
             return products;
         }
-        if (isMarketplace(rawUrl)) {
-            log.debug("[WEBSITE] Skipping marketplace URL for @{}: {}", brandName, rawUrl);
+        if (isIgnoredDomain(rawUrl)) {
+            log.debug("[WEBSITE] Skipping ignored URL for @{}: {}", brandName, rawUrl);
             return products;
         }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // FAST PATH 1: Try Shopify /products.json via pure HTTP (no browser!)
+        // ═══════════════════════════════════════════════════════════════════
+        String baseUrlForHttp = extractBaseUrl(rawUrl);
+        // We comment this out to force DOM extraction for localized pricing
+        /*
+        try {
+            List<RawProduct> shopifyHttpProducts = shopifyParser.extractViaHttp(baseUrlForHttp);
+            if (!shopifyHttpProducts.isEmpty()) {
+                log.info("[WEBSITE] ⚡ Shopify HTTP fast-path: {} products for @{} — skipping browser entirely",
+                        shopifyHttpProducts.size(), brandName);
+                return getTopCandidates(shopifyHttpProducts, searchQuery);
+            }
+        } catch (Exception e) {
+            log.debug("[WEBSITE] Shopify HTTP fast-path failed for @{}: {}", brandName, e.getMessage());
+        }
+        */
 
         log.info("[WEBSITE] Scraping underdog for @{}: {}", brandName, rawUrl);
 
@@ -76,11 +123,29 @@ public class WebsiteClient {
             BrowserContext context = browser.newContext(
                     new Browser.NewContextOptions().setViewportSize(1280, 900).setUserAgent(USER_AGENT));
 
+            // Block heavy resources to speed up page loads dramatically
+            setupResourceBlocking(context);
+
             Page page = context.newPage();
 
             String resolvedUrl = resolveUrl(page, rawUrl, brandName);
             if (resolvedUrl == null) {
-                log.warn("[WEBSITE] ✗ resolveUrl returned null for @{} ({})", brandName, rawUrl);
+                log.warn("[WEBSITE] ✗ resolveUrl returned null for @{} ({}), trying HTTP HTML fallback", brandName, rawUrl);
+                // ═══════════════════════════════════════════════════════════
+                // FALLBACK: Raw HTTP HTML fetch + JSON-LD parse
+                // ═══════════════════════════════════════════════════════════
+                products = shopifyParser.extractViaHttpHtml(baseUrlForHttp);
+                if (!products.isEmpty()) {
+                    log.info("[WEBSITE] ⚡ HTTP HTML fallback: {} products for @{}", products.size(), brandName);
+                    context.close();
+                    return getTopCandidates(products, searchQuery);
+                }
+                context.close();
+                return products;
+            }
+
+            if (isIgnoredDomain(resolvedUrl)) {
+                log.debug("[WEBSITE] Skipping ignored resolved URL for @{}: {}", brandName, resolvedUrl);
                 context.close();
                 return products;
             }
@@ -145,6 +210,12 @@ public class WebsiteClient {
                         genericParser.extractProducts(page, baseUrl);
             }
 
+            // If STILL empty after all browser strategies, try HTTP HTML fallback
+            if (products.isEmpty()) {
+                log.info("[WEBSITE] All browser strategies exhausted for @{}, trying HTTP HTML fallback", brandName);
+                products = shopifyParser.extractViaHttpHtml(baseUrlForHttp);
+            }
+
             products = deduplicate(products);
             log.info("[WEBSITE] ✓ {} products found for @{} before final ranking", products.size(), brandName);
 
@@ -157,11 +228,48 @@ public class WebsiteClient {
 
         } catch (Exception e) {
             log.error("[WEBSITE] Fatal error for @{} ({}): {}", brandName, rawUrl, e.getMessage());
+
+            // Last resort: HTTP HTML fallback even after fatal browser error
+            if (products.isEmpty()) {
+                try {
+                    products = shopifyParser.extractViaHttpHtml(baseUrlForHttp);
+                    if (!products.isEmpty()) {
+                        log.info("[WEBSITE] ⚡ Post-crash HTTP fallback rescued {} products for @{}", products.size(), brandName);
+                        return getTopCandidates(products, searchQuery);
+                    }
+                } catch (Exception ignored) {}
+            }
         }
         return products;
     }
 
-    // ── Category Search & Navigation ───────────────────────────────────────
+    // ── Resource Blocking ─────────────────────────────────────────────────
+
+    private void setupResourceBlocking(BrowserContext context) {
+        context.route("**/*", route -> {
+            String url = route.request().url().toLowerCase();
+            String resourceType = route.request().resourceType();
+
+            // Block heavy resource types we don't need for scraping
+            if ("image".equals(resourceType) || "font".equals(resourceType)
+                    || "media".equals(resourceType) || "stylesheet".equals(resourceType)) {
+                route.abort();
+                return;
+            }
+
+            // Block known analytics/tracking domains
+            for (String blocked : BLOCKED_RESOURCE_DOMAINS) {
+                if (url.contains(blocked)) {
+                    route.abort();
+                    return;
+                }
+            }
+
+            route.resume();
+        });
+    }
+
+    // ── Category Search & Navigation ──────────────────────────────────────
 
     private List<RawProduct> tryCategorySearch(Page page, String baseUrl, String brandName, String category, String platform) {
         if (category == null || category.isBlank()) return Collections.emptyList();
@@ -180,7 +288,7 @@ public class WebsiteClient {
                     page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE, 
                             new Page.WaitForLoadStateOptions().setTimeout(5000));
                 } catch (Exception ignored) {}
-                page.waitForTimeout(2000); // Wait for SPA animations
+                smartWaitForProducts(page);
                 
                 products = "SHOPIFY".equals(platform) ? 
                         shopifyParser.extractProducts(page, baseUrl, page.url()) : 
@@ -225,8 +333,6 @@ public class WebsiteClient {
         return Collections.emptyList();
     }
 
-    // ── Collection page auto-discovery (removed, replaced by discoverAndScoreLinks) ──
-
     // ── URL resolution ────────────────────────────────────────────────────
 
     private String resolveUrl(Page page, String rawUrl, String brandName) {
@@ -262,7 +368,8 @@ public class WebsiteClient {
                 for (ElementHandle a : anchors) {
                     String href = a.getAttribute("href");
                     if (href != null && href.startsWith("http") && !isKnownSocialMedia(href)
-                            && AGGREGATOR_DOMAINS.stream().noneMatch(href::contains)) {
+                            && AGGREGATOR_DOMAINS.stream().noneMatch(href::contains)
+                            && !isIgnoredDomain(href)) {
                         return href.split("\\?")[0];
                     }
                 }
@@ -273,36 +380,118 @@ public class WebsiteClient {
         return null;
     }
 
-    // ── Navigation with NETWORKIDLE + scroll-to-load ──────────────────────
+    // ── Multi-strategy navigation with retries ──────────────────────────────
 
     private boolean attemptNavigation(Page page, String url) {
+        // Strategy 1: Standard navigation with DOMCONTENTLOADED
         try {
-            page.navigate(url, new Page.NavigateOptions().setTimeout(LOAD_TIMEOUT));
+            page.navigate(url, new Page.NavigateOptions().setTimeout(LOAD_TIMEOUT_DEFAULT));
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-            // Try NETWORKIDLE for JS-heavy sites (Wix, React, etc.) — don't fail if it times out
+            // Try NETWORKIDLE for JS-heavy sites — don't fail if it times out
             try {
                 page.waitForLoadState(LoadState.NETWORKIDLE,
                         new Page.WaitForLoadStateOptions().setTimeout(5_000));
             } catch (Exception ignored) {}
 
-            // Hard wait for React/Vite SPAs (like Zestwear) to hydrate
-            page.waitForTimeout(3000);
+            // Smart wait instead of hard 3000ms
+            smartWaitForProducts(page);
 
-            // Scroll page to trigger lazy-load rendering (critical for Wix, React sites)
+            // Scroll page to trigger lazy-load rendering
             for (int i = 0; i < 3; i++) {
                 page.evaluate("window.scrollBy(0, window.innerHeight)");
-                page.waitForTimeout(800);
+                page.waitForTimeout(500);
             }
-            // Scroll back to top so subsequent selectors see the full page
             page.evaluate("window.scrollTo(0, 0)");
-            page.waitForTimeout(500);
+            page.waitForTimeout(300);
 
             return true;
         } catch (Exception e) {
-            log.debug("[WEBSITE] attemptNavigation failed for {}: {}", url, e.getMessage());
-            return false;
+            log.debug("[WEBSITE] Strategy 1 (standard) failed for {}: {}", url, e.getMessage());
         }
+
+        // Strategy 2: Extended timeout, COMMIT-only (page started loading)
+        try {
+            log.debug("[WEBSITE] Retrying with strategy 2 (extended timeout) for {}", url);
+            page.navigate(url, new Page.NavigateOptions()
+                    .setTimeout(LOAD_TIMEOUT_EXTENDED)
+                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.COMMIT));
+
+            // Wait for body to be present
+            try {
+                page.waitForSelector("body", new Page.WaitForSelectorOptions().setTimeout(10_000));
+            } catch (Exception ignored) {}
+
+            // Wait for some content to render
+            try {
+                page.waitForLoadState(LoadState.DOMCONTENTLOADED,
+                        new Page.WaitForLoadStateOptions().setTimeout(10_000));
+            } catch (Exception ignored) {}
+
+            smartWaitForProducts(page);
+
+            for (int i = 0; i < 2; i++) {
+                page.evaluate("window.scrollBy(0, window.innerHeight)");
+                page.waitForTimeout(500);
+            }
+            page.evaluate("window.scrollTo(0, 0)");
+
+            return true;
+        } catch (Exception e) {
+            log.debug("[WEBSITE] Strategy 2 (extended) failed for {}: {}", url, e.getMessage());
+        }
+
+        // Strategy 3: Alternative User-Agent (some sites block headless Chrome)
+        try {
+            log.debug("[WEBSITE] Retrying with strategy 3 (alt UA) for {}", url);
+            page.setExtraHTTPHeaders(java.util.Map.of(
+                    "User-Agent", USER_AGENT_ALT,
+                    "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language", "en-US,en;q=0.9"
+            ));
+            page.navigate(url, new Page.NavigateOptions()
+                    .setTimeout(LOAD_TIMEOUT_EXTENDED)
+                    .setWaitUntil(com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED));
+
+            smartWaitForProducts(page);
+
+            for (int i = 0; i < 2; i++) {
+                page.evaluate("window.scrollBy(0, window.innerHeight)");
+                page.waitForTimeout(500);
+            }
+            page.evaluate("window.scrollTo(0, 0)");
+
+            return true;
+        } catch (Exception e) {
+            log.debug("[WEBSITE] Strategy 3 (alt UA) failed for {}: {}", url, e.getMessage());
+        }
+
+        return false;
+    }
+
+    // ── Smart wait — polls for product-like content instead of hard sleep ──
+
+    private void smartWaitForProducts(Page page) {
+        String[] productIndicators = {
+                "[class*='product']", "[class*='Product']", ".price", "[class*='price']",
+                "[class*='Price']", "img[src*='product']", "img[src*='cdn.shopify']",
+                "[data-product]", "[itemtype*='Product']", ".card", "article",
+                "[data-hook='product-list-grid-item']"
+        };
+        String combinedSelector = String.join(", ", productIndicators);
+
+        // Poll up to 4 seconds in 500ms intervals
+        for (int i = 0; i < 8; i++) {
+            try {
+                int count = page.querySelectorAll(combinedSelector).size();
+                if (count >= 2) {
+                    log.debug("[WEBSITE] Smart wait: found {} product indicators after {}ms", count, i * 500);
+                    return;
+                }
+            } catch (Exception ignored) {}
+            page.waitForTimeout(500);
+        }
+        log.debug("[WEBSITE] Smart wait: timed out after 4s with no product indicators");
     }
 
     // ── Platform detection ────────────────────────────────────────────────
@@ -332,8 +521,8 @@ public class WebsiteClient {
         return trimmed.split("\\?")[0];
     }
 
-    private boolean isMarketplace(String url) {
-        return MARKETPLACE_DOMAINS.stream().anyMatch(url.toLowerCase()::contains);
+    private boolean isIgnoredDomain(String url) {
+        return IGNORED_DOMAINS.stream().anyMatch(url.toLowerCase()::contains);
     }
 
     private String extractBaseUrl(String url) {
@@ -509,6 +698,18 @@ public class WebsiteClient {
         }
         
         return products.stream()
+                // Must have a valid product URL that isn't just a domain/homepage
+                .filter(p -> {
+                    String u = p.getProductUrl();
+                    if (u == null || u.isBlank()) return false;
+                    try {
+                        java.net.URI uri = java.net.URI.create(u);
+                        String path = uri.getPath();
+                        return path != null && path.length() > 1;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
                 .sorted((p1, p2) -> Double.compare(p2.getHeuristicScore(), p1.getHeuristicScore()))
                 .limit(15)
                 .toList();

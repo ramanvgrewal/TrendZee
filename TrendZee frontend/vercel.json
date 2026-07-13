@@ -3,6 +3,14 @@
     {
       "source": "/api/(.*)",
       "destination": "https://api.trendxee.com/api/$1"
+    },
+    {
+      "source": "/oauth2/(.*)",
+      "destination": "https://api.trendxee.com/oauth2/$1"
+    },
+    {
+      "source": "/login/(.*)",
+      "destination": "https://api.trendxee.com/login/$1"
     }
   ]
 }

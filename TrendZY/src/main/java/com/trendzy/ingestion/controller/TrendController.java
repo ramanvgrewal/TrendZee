@@ -36,4 +36,35 @@ public class TrendController {
 
         return ResponseEntity.ok(trends);
     }
+
+//    @DeleteMapping
+//    public ResponseEntity<java.util.Map<String, Object>> deleteTrends(
+//            @RequestParam String category,
+//            @RequestParam double maxScore) {
+//
+//        log.info("[CTRL] Deleting trends for category: {}, with score less than: {}", category, maxScore);
+//
+//        String normalized = category.trim().toUpperCase();
+//        long deletedCount = trendRepository.deleteByCategoryAndTrendScoreLessThan(normalized, maxScore);
+//
+//        return ResponseEntity.ok(java.util.Map.of(
+//                "deletedCount", deletedCount,
+//                "message", "Successfully deleted trends"
+//        ));
+//    }
+
+//    @DeleteMapping("/old")
+//    public ResponseEntity<java.util.Map<String, Object>> deleteOldTrends(
+//            @RequestParam(defaultValue = "7") int daysOld) {
+//
+//        log.info("[CTRL] Deleting trends older than {} days", daysOld);
+//
+//        java.time.LocalDateTime thresholdDate = java.time.LocalDateTime.now().minusDays(daysOld);
+//        long deletedCount = trendRepository.deleteByLastUpdatedAtBefore(thresholdDate);
+//
+//        return ResponseEntity.ok(java.util.Map.of(
+//                "deletedCount", deletedCount,
+//                "message", String.format("Successfully deleted trends older than %d days", daysOld)
+//        ));
+//    }
 }

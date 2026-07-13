@@ -4,28 +4,23 @@ import { nitro } from "nitro/vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
+const apiBaseUrl = process.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 export default defineConfig({
-  plugins: [
-    tanstackStart(),
-    nitro({ preset: 'vercel' }),
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [tanstackStart(), nitro({ preset: "vercel" }), react(), tailwindcss()],
   resolve: {
     // Native tsconfig paths support in Vite
-    tsconfigPaths: true
+    tsconfigPaths: true,
   },
   server: {
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': {
-        target: 'https://api.trendxee.com',
+      "/api": {
+        target: apiBaseUrl,
         changeOrigin: true,
         secure: false,
-      }
-    }
-  }
+      },
+    },
+  },
 });
-
-

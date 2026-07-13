@@ -1,175 +1,309 @@
-import { ExternalLink, MapPin, Sparkles, Radio, Zap } from "lucide-react";
-import type { ProductDetail, Trend } from "@/lib/mock-data";
-
-function formatUtc(iso: string): string {
-  if (!iso) return "Unknown";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
-}
-
-const sourceLabels: Record<"underdog" | "amazon" | "flipkart", string> = {
+import { useState } from "react";
+import { ChevronDown, ExternalLink, MapPin, Sparkles, Radio, Zap, Bookmark } from "lucide-react";
+import type { ProductMatch, Trend } from "@/lib/mock-data";
+import { useEffect } from "react";
+import { archiveTrend, unarchiveTrend, getArchiveStatus } from "@/lib/archiveApi";
+type Source = "underdog" | "amazon" | "flipkart";
+const sourceLabels: Record<Source, string> = {
   underdog: "The Underdog",
   amazon: "Amazon",
   flipkart: "Flipkart",
 };
 
-function ProductBlock({
-  source,
-  product,
-  highlight,
-}: {
-  source: "underdog" | "amazon" | "flipkart";
-  product: ProductDetail | null;
-  highlight?: boolean;
-}) {
-  if (!product) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-foreground/10 bg-foreground/[0.01] p-4 text-center text-foreground/30">
-        <span className="text-[10px] uppercase tracking-widest">{sourceLabels[source]}</span>
-        <span className="mt-2 text-xs">No match found</span>
-      </div>
-    );
+const trackClick = (trendId: string, source: Source, url: string) => {
+  const baseUrl = import.meta.env?.VITE_API_BASE_URL || (typeof process !== 'undefined' && process.env.VITE_API_BASE_URL) || (import.meta.env?.DEV ? "http://localhost:8080" : "");
+  const token = localStorage.getItem("token");
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // navigator.sendBeacon is better for tracking links, but doesn't easily support custom headers like Authorization
+  // fetch with keepalive ensures the request is not cancelled when navigating away
+  fetch(`${baseUrl}/api/analytics/click`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ trendId, source, url }),
+    keepalive: true,
+  }).catch(err => console.error("Failed to track click", err));
+};
+
+function UnderdogHero({ product, trendId, fill }: { product: ProductMatch; trendId: string; fill?: boolean }) {
   return (
     <a
       href={product.shopUrl}
       target="_blank"
-      rel="noreferrer"
-      className={`group flex flex-col overflow-hidden rounded-xl border transition-colors ${
-        highlight
-          ? "border-foreground/15 bg-foreground/[0.05]"
-          : "border-foreground/5 bg-foreground/[0.02] hover:bg-foreground/[0.04]"
-      }`}
+      rel="noopener noreferrer"
+      onClick={() => trackClick(trendId, 'underdog', product.shopUrl)}
+      className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[oklch(0.72_0.09_55/40%)] bg-[oklch(0.72_0.09_55/6%)] shadow-[0_25px_60px_-30px_oklch(0.72_0.09_55/60%)] transition-all hover:-translate-y-1"
     >
-      <div className="relative aspect-square overflow-hidden">
+      <div className={`relative w-full overflow-hidden ${fill ? "min-h-0 flex-1" : "aspect-[4/5]"}`}>
         <img
           src={product.imageUrl}
           alt={product.title}
           loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
-        <div className="absolute left-3 top-3 rounded-full bg-foreground/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur">
-          {sourceLabels[source]}
+        <div className="absolute left-4 top-4 rounded-full bg-[oklch(0.72_0.09_55)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-background">
+          The Underdog
         </div>
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-4">
-        <div className="text-[11px] uppercase tracking-widest text-foreground/30">{product.brandName}</div>
-        <div className="line-clamp-2 text-sm text-foreground/80">{product.title}</div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="font-display text-lg font-semibold text-foreground">
-            {product.currency || "Rs."}
-            {product.price?.toLocaleString()}
+      <div className={`flex flex-col gap-1 p-6 ${fill ? "" : "flex-1"}`}>
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/40">{product.brandName}</div>
+        <div className="line-clamp-2 font-display text-xl font-semibold text-foreground">{product.title}</div>
+        <div className="mt-3 flex items-center justify-between">
+          <span className="font-display text-3xl font-bold text-foreground">
+            {product.currency}
+            {product.price?.toLocaleString() ?? "N/A"}
           </span>
-          <ExternalLink className="h-3.5 w-3.5 text-foreground/30 transition-transform group-hover:translate-x-0.5" />
+          <ExternalLink className="h-4 w-4 text-foreground/40 transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
     </a>
   );
 }
 
-export function TrendCard({ trend }: { trend: Trend }) {
+function CompactProduct({ source, product, trendId }: { source: Source; product: ProductMatch; trendId: string }) {
   return (
-    <article className="rounded-2xl border border-foreground/5 bg-foreground/[0.02] p-6 md:p-8">
-      {/* Header */}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex h-2 w-2 rounded-full ${trend.active ? "bg-foreground/60" : "bg-foreground/20"}`} />
-            <span className="text-[10px] uppercase tracking-widest text-foreground/40">
-              {trend.active ? "active drop" : "archived"}
-            </span>
-          </div>
-          <h2 className="mt-1.5 font-display text-2xl font-semibold text-foreground md:text-3xl">{trend.trendName}</h2>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-widest text-foreground/40">
-            <span className="inline-flex items-center gap-1"><Radio className="h-3 w-3" />{trend.totalSignals} signals</span>
-            {trend.signalProducts?.underdog && (
-              <>
-                <span className="text-foreground/15">·</span>
-                <span className="inline-flex items-center gap-1"><Zap className="h-3 w-3" />Shoppable</span>
-              </>
-            )}
-            <span className="text-foreground/15">·</span>
-            <span>{trend.enrichmentStatus?.toLowerCase() || "pending"}</span>
-            {trend.indiaRelevant && (
-              <>
-                <span className="text-foreground/15">·</span>
-                <span className="inline-flex items-center gap-1 text-foreground/60">
-                  <MapPin className="h-3 w-3" /> India-relevant
-                </span>
-              </>
-            )}
-          </div>
+    <a
+      href={product.shopUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => trackClick(trendId, source, product.shopUrl)}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02] transition-all hover:-translate-y-0.5 hover:border-foreground/25"
+    >
+      <div className="relative aspect-square w-full overflow-hidden">
+        <img
+          src={product.imageUrl}
+          alt={product.title}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+        <div className="absolute left-2 top-2 rounded-full bg-background/75 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-foreground/80 backdrop-blur">
+          {sourceLabels[source]}
         </div>
-        <div className="flex flex-col items-end rounded-xl border border-foreground/5 bg-foreground/[0.03] px-4 py-2.5">
-          <div className="text-[10px] uppercase tracking-widest text-foreground/40">Trend Score</div>
-          <div className="font-display text-3xl font-semibold leading-none text-foreground">{Math.round(trend.trendScore)}</div>
-        </div>
-      </header>
-
-      {/* Vibe tags */}
-      <div className="mt-5 flex flex-wrap gap-1.5">
-        {(trend.vibeTags || []).map((t) => (
-          <span
-            key={t}
-            className="rounded-full border border-foreground/5 bg-foreground/[0.03] px-2.5 py-1 text-xs text-foreground/60"
-          >
-            #{t}
+      </div>
+      <div className="flex flex-1 flex-col gap-0.5 p-3">
+        <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-foreground/40">{product.brandName}</div>
+        <div className="line-clamp-2 text-xs font-medium text-foreground/85">{product.title}</div>
+        <div className="mt-1.5 flex items-center justify-between">
+          <span className="font-display text-base font-bold text-foreground">
+            {product.currency}
+            {product.price?.toLocaleString() ?? "N/A"}
           </span>
-        ))}
-      </div>
-
-      {/* AI Summary */}
-      {trend.aiSummary && (
-        <div className="mt-6">
-          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-foreground/40">
-            <Sparkles className="h-3 w-3" /> AI Summary
-          </div>
-          <p className="mt-2 leading-relaxed text-foreground/70">{trend.aiSummary}</p>
-        </div>
-      )}
-
-      {/* Why trending */}
-      {trend.whyTrending && trend.whyTrending.length > 0 && (
-        <div className="mt-5">
-          <div className="text-[11px] uppercase tracking-widest text-foreground/40">Why it&apos;s trending</div>
-          <ul className="mt-2 space-y-1.5">
-            {trend.whyTrending.map((r, i) => (
-              <li key={i} className="flex gap-2 text-sm text-foreground/60">
-                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground/30" />
-                <span>{r}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Product triad */}
-      <div className="mt-7">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="text-[11px] uppercase tracking-widest text-foreground/40">Product Triad</div>
-          <div className="text-[11px] text-foreground/30">
-            est. price <span className="font-mono text-foreground/60">{trend.currency || "Rs."}{trend.estimatedPrice?.toLocaleString()}</span>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <ProductBlock source="underdog" product={trend.signalProducts?.underdog || null} highlight />
-          <ProductBlock source="amazon" product={trend.signalProducts?.amazon || null} />
-          <ProductBlock source="flipkart" product={trend.signalProducts?.flipkart || null} />
+          <ExternalLink className="h-3 w-3 text-foreground/40" />
         </div>
       </div>
+    </a>
+  );
+}
 
-      <footer className="mt-6 flex items-center justify-between border-t border-foreground/5 pt-4 text-[11px] text-foreground/25">
-        <span className="font-mono">
-          id: {trend.id}
-          {trend.supportingSignalIds && trend.supportingSignalIds.length > 0 && (
-            <span className="ml-3">· {trend.supportingSignalIds.length} supporting signals</span>
+function MainstreamPicks({ products, trendId }: { products: { source: Source; product?: ProductMatch }[]; trendId: string }) {
+  return (
+    <div>
+      <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/40">
+        Mainstream picks
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {products.map(
+          ({ source, product }) =>
+            product && <CompactProduct key={source} source={source} product={product} trendId={trendId} />,
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function TrendCard({ trend, isArchivedContext = false, onUnarchive }: { trend: Trend, isArchivedContext?: boolean, onUnarchive?: () => void }) {
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [isArchived, setIsArchived] = useState(isArchivedContext);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const status = await getArchiveStatus(trend.id);
+        setIsArchived(status);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    if (!isArchivedContext) {
+      checkStatus();
+    }
+  }, [trend.id, isArchivedContext]);
+
+  const handleArchiveClick = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please login to archive trends.");
+      return;
+    }
+    
+    try {
+      if (isArchived) {
+        if (window.confirm("Are you sure you want to unarchive this trend? If this trend is no longer in the main feed, it will be gone permanently.")) {
+          await unarchiveTrend(trend.id);
+          setIsArchived(false);
+          if (onUnarchive) onUnarchive();
+        }
+      } else {
+        await archiveTrend(trend.id);
+        setIsArchived(true);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update archive status.");
+    }
+  };
+  const mainstream: { source: Source; product?: ProductMatch }[] = [
+    { source: "amazon", product: trend.products?.amazon },
+    { source: "flipkart", product: trend.products?.flipkart },
+  ];
+
+  return (
+    <article className="rounded-3xl border border-foreground/10 bg-foreground/[0.02] p-6 md:p-10">
+      <div className="flex flex-col gap-8 md:grid md:grid-cols-[1.15fr_1fr] md:gap-10">
+        {/* Left column: header, why trending, mobile products, AI summary, desktop mainstream picks */}
+        <div className="flex flex-col gap-6">
+          {/* Header */}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                {trend.active && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[oklch(0.72_0.09_55)] opacity-70" />
+                )}
+                <span className={`relative inline-flex h-2 w-2 rounded-full ${trend.active ? "bg-[oklch(0.72_0.09_55)]" : "bg-foreground/20"}`} />
+              </span>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.28em] text-foreground/50">
+                {trend.active ? "active drop" : "archived"}
+              </span>
+            </div>
+
+            <div className="mt-3 flex items-start justify-between gap-4">
+              <h2 className="font-display text-3xl font-bold leading-[1.05] tracking-tight text-foreground md:text-5xl">
+                {trend.name}
+              </h2>
+              <button
+                onClick={handleArchiveClick}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className="mt-1 flex-shrink-0 text-foreground/40 hover:text-[oklch(0.72_0.09_55)] transition-colors"
+                title={isArchived ? "Unarchive" : "Archive"}
+              >
+                <Bookmark 
+                  className="h-6 w-6 transition-all" 
+                  fill={isArchived || isHovered ? "currentColor" : "none"}
+                />
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-5xl font-bold italic leading-none text-[oklch(0.72_0.09_55)]">
+                  {trend.trendScore}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/40">
+                  trend score
+                </span>
+              </div>
+              <div className="h-8 w-px bg-foreground/10" />
+              <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-foreground/50">
+                <span className="inline-flex items-center gap-1"><Radio className="h-3 w-3" />{trend.totalSignals} signals</span>
+                {trend.signalProducts.length > 0 && (
+                  <>
+                    <span className="text-foreground/15">·</span>
+                    <span className="inline-flex items-center gap-1"><Zap className="h-3 w-3" />{trend.signalProducts.length} shoppable</span>
+                  </>
+                )}
+                {trend.indiaRelevant && (
+                  <>
+                    <span className="text-foreground/15">·</span>
+                    <span className="inline-flex items-center gap-1 text-[oklch(0.72_0.09_55)]">
+                      <MapPin className="h-3 w-3" /> India
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-1.5">
+              {trend.vibeTags.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full border border-foreground/15 bg-background/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/60"
+                >
+                  #{t}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Why it's trending */}
+          <div>
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+              Why it's trending
+            </div>
+            <ul className="flex flex-col gap-2">
+              {trend.whyTrending.map((point, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground/75">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[oklch(0.72_0.09_55)]" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Mobile: underdog then mainstream picks */}
+          {trend.products?.underdog && (
+            <div className="md:hidden">
+              <UnderdogHero product={trend.products.underdog} trendId={trend.id} />
+            </div>
           )}
-        </span>
-        <span>updated {formatUtc(trend.lastUpdatedAt)}</span>
-      </footer>
+          <div className="md:hidden">
+            <MainstreamPicks products={mainstream} trendId={trend.id} />
+          </div>
+
+          {/* AI Summary toggle */}
+          <div className="rounded-2xl border border-foreground/10 bg-background/30">
+            <button
+              type="button"
+              onClick={() => setSummaryOpen((v) => !v)}
+              aria-expanded={summaryOpen}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-foreground/[0.03]"
+            >
+              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.28em] text-foreground/50">
+                <Sparkles className="h-3 w-3" /> AI Summary
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-foreground/40 transition-transform ${summaryOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {summaryOpen && (
+              <div className="border-t border-foreground/10 px-4 py-4">
+                <p className="text-[15px] leading-relaxed text-foreground/75">{trend.aiSummary}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Mainstream picks — desktop only */}
+          <div className="hidden md:block">
+            <MainstreamPicks products={mainstream} trendId={trend.id} />
+          </div>
+        </div>
+
+        {/* Desktop: underdog right column fills full card height */}
+        {trend.products?.underdog && (
+          <div className="hidden h-full min-h-0 md:block">
+            <UnderdogHero product={trend.products.underdog} trendId={trend.id} fill />
+          </div>
+        )}
+      </div>
     </article>
   );
 }

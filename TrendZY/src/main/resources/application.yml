@@ -1,5 +1,6 @@
 server:
   port: 8080
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -9,6 +10,18 @@ spring:
     mongodb:
       uri: ${MONGODB_URI:}
       database: trendxee
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - email
+              - profile
 
   kafka:
     bootstrap-servers: ${KAFKA_BROKERS:127.0.0.1:9092}
@@ -27,6 +40,12 @@ spring:
         delivery.timeout.ms: 120000
         linger.ms: 1
         batch.size: 16384
+
+app:
+  jwtSecret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  jwtExpirationMs: 86400000
+  frontend:
+    redirectUri: ${FRONTEND_URL:https://trendxee.com}/auth/callback
 
 scraper:
   instagram:

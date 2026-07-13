@@ -82,8 +82,8 @@ public class Trend {
         private String title;
         @Builder.Default
         private String currency = "Rs.";
-        private Integer price;
-        private Integer originalPrice;
+        private Double price;
+        private Double originalPrice;
         private String shopUrl;
         private String imageUrl;
         private Boolean codAvailable;

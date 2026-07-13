@@ -1,10 +1,12 @@
-import { defineConfig } from '@tanstack/react-start/config'
+import { defineConfig } from "@tanstack/react-start/config";
+
+const apiBaseUrl = process.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export default defineConfig({
   server: {
-    preset: 'vercel',
+    preset: "vercel",
     routeRules: {
-      '/api/**': { proxy: 'https://api.trendxee.com/api/**' }
-    }
-  }
-})
+      "/api/**": { proxy: `${apiBaseUrl}/api/**` },
+    },
+  },
+});

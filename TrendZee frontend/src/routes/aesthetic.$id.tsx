@@ -3,24 +3,30 @@ import { ArrowLeft, Radio } from "lucide-react";
 import { motion } from "framer-motion";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TrendCard } from "@/components/TrendCard";
-import type { Aesthetic, Trend, TrendSlice } from "@/lib/mock-data";
-import { aesthetics } from "@/lib/mock-data";
+import type { Aesthetic, Trend } from "@/lib/mock-data";
+import { aesthetics, getTrendsForAesthetic } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/aesthetic/$id")({
   loader: async ({ params }): Promise<{ aesthetic: Aesthetic; trends: Trend[] }> => {
     const aesthetic = aesthetics.find((a) => a.id === params.id);
     if (!aesthetic) throw notFound();
-    
+
     let queryCategory = params.id;
-    if (params.id === 'upper') queryCategory = 'shirts';
-    else if (params.id === 'gym') queryCategory = 'sportswear';
-    const baseUrl = typeof window !== 'undefined' ? '' : 'https://api.trendxee.com';
+    if (params.id === "upper") queryCategory = "shirts";
+    else if (params.id === "gym") queryCategory = "sportswear";
+    const baseUrl = import.meta.env?.VITE_API_BASE_URL || (typeof process !== 'undefined' && process.env.VITE_API_BASE_URL) || (import.meta.env?.DEV ? "http://127.0.0.1:8080" : "");
     try {
       const res = await fetch(`${baseUrl}/api/v2/trends?category=${queryCategory}&size=20`);
       let trends: Trend[] = [];
       if (res.ok) {
-        const data = await res.json() as TrendSlice;
-        trends = data.content || [];
+        const data = await res.json();
+        trends = (data.content || []).map((t: any) => ({
+          ...t,
+          name: t.trendName || t.name,
+          products: t.signalProducts,
+          supportingSignals: t.supportingSignalIds || [],
+          signalProducts: t.signalProducts ? [t.signalProducts] : [],
+        }));
       }
       return { aesthetic, trends };
     } catch (e) {
@@ -57,31 +63,12 @@ function AestheticDetail() {
       <SiteHeader />
 
       <section className="relative mx-auto max-w-7xl px-6 pb-16 pt-10 md:pt-14">
-        <div className="flex flex-wrap items-center gap-6 md:gap-8">
-          <Link
-            to="/"
-            className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-foreground/50 transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> All lanes
-          </Link>
-          
-          <div className="hidden h-3.5 w-px shrink-0 bg-foreground/15 md:block" />
-
-          <div className="hidden flex-wrap items-center gap-4 font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/40 md:flex">
-            {aesthetics.map((a) => (
-              <Link
-                key={a.id}
-                to="/aesthetic/$id"
-                params={{ id: a.id }}
-                className={`transition-colors hover:text-foreground ${
-                  a.id === aesthetic.id ? "text-foreground font-semibold" : ""
-                }`}
-              >
-                {a.name}
-              </Link>
-            ))}
-          </div>
-        </div>
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-foreground/50 transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> All lanes
+        </Link>
 
         <div className="mt-8">
           <motion.div
@@ -94,7 +81,7 @@ function AestheticDetail() {
               <span className="rounded-full bg-foreground px-2.5 py-1 text-background">Lane {number}</span>
               <span className="inline-flex items-center gap-1.5 text-foreground/60">
                 <Radio className="h-3 w-3" />
-                {aesthetic.signalCount.toLocaleString('en-US')} signals
+                {aesthetic.signalCount.toLocaleString()} signals
               </span>
               <span className="text-foreground/25">·</span>
               <span className="text-[oklch(0.55_0.09_50)]">Score {aesthetic.trendScore}</span>
@@ -143,7 +130,7 @@ function AestheticDetail() {
             </h2>
           </div>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.22em] text-foreground/40 md:inline">
-            {aesthetic.signalCount.toLocaleString('en-US')} signals
+            {aesthetic.signalCount.toLocaleString()} signals
           </span>
         </div>
         {trends.length === 0 ? (

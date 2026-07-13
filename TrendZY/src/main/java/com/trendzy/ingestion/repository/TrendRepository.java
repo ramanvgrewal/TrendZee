@@ -19,4 +19,9 @@ public interface TrendRepository extends MongoRepository<Trend, String> {
     @Query(value = "{ 'category': ?0, 'enrichmentStatus': 'COMPLETED' }",
             sort = "{ 'trendScore': -1, 'lastUpdatedAt': -1 }")
     Slice<Trend> findByCategory(String category, Pageable pageable);
+    // Delete trends by category with score less than a threshold
+    long deleteByCategoryAndTrendScoreLessThan(String category, double maxScore);
+
+    // Delete trends that haven't been updated since a specific date
+    long deleteByLastUpdatedAtBefore(java.time.LocalDateTime date);
 }

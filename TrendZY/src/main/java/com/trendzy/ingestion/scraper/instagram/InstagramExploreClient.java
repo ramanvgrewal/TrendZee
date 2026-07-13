@@ -46,16 +46,19 @@ public class InstagramExploreClient {
     private static final Map<String, List<String>> SECTION_TAGS = Map.of(
             "STREETWEAR", List.of(
                     "streetwearindia",    // Your clean local streetwear anchor
-                    "blokecore",          // The global tag: massive volume, very high-quality aesthetic fits
+                    "homegrownstreetwear",          // The global tag: massive volume, very high-quality aesthetic fits
                     "vintagefootball",    // Brings in super clean retro jersey and tee styling
                     "oversizedteesindia", // Keeps the focus on the actual product fit
-                    "hgstreet"            // Highly curated homegrown Indian streetwear community
+                    "hgstreet",
+                    "jerseycultureindia"    // Highly curated homegrown Indian streetwear community
             ),
 
             "SPORTSWEAR", List.of(
-                    "gymwearindia", "activewearindia", "gymwearbrandindia", "activewearbrandindia",
-                    "athleisureindia", "athleisurewearindia", "homegrowngymwear", "homegrownactivewear",
-                    "pumpcoverindia", "compressionwearindia"
+                    "pumpcoverindia",        // Massive Gen Z gym trend. Pulls in the oversized hoodies/tees worn specifically for the gym.
+                    "loosefitjoggersindia",       // Captures the lifestyle crossover where sportswear is styled for everyday street use.
+                    "compressionwearindia",  // High-signal for the tight-fitting, athletic aesthetic dominating modern gym culture.
+                    "homegrowngymwear",      // Filters out drop-shippers and targets high-quality, aesthetic Indian fitness brands.
+                    "gymwearindia"      // Forces the scraper to pull product-focused lifestyle shoots rather than random workout videos.
             ),
 
             "ANIMEWEAR", List.of("animestreetwearindia", "animeclothingindia", "animemerchindia",
@@ -63,51 +66,36 @@ public class InstagramExploreClient {
                     "homegrownanime", "animestreetstyleindia"),
 
             "SNEAKERS", List.of(
-                    "sneakerbrandindia", "homegrownsneakers", "indiansneakerbrand",
-                    "sneakercommunityindia", "sneakersforeveryday", "sneakersindia",
-                    "sneakerdropindia", "sneakerboutiqueindia",
-                    "kicksofindia", "sneakerheadindia",
-                    "customsneakersindia", "sneakercultureindia"
+                    "shoesindia",          // The cleanest, highest-quality community tag for on-feet styling and authentic sneakerheads.
+                    "sneakerdropindia",      // Pure commerce/hype signal. Pulls in actual new releases, brand announcements, and stock drops.
+                    "sneakerindia",    // Points the scraper directly at homegrown D2C brands actively selling their own silhouettes.
+                    "shoeindia",  // High-res, professional product shots from premium curators and resellers.
+                    "sneakercultureindia"    // Captures the broader streetwear lifestyle and how sneakers are being paired with fits.
             ),
 
             "SHIRTS", List.of(
-                    // Your originals
-                    "linenshirtsindia", "shirts", "oxfordshirtsindia",
-                    "oldmoneyshirts", "classicmenshirts", "plainshirts",
-
-                    // Broad Indian Shirt Tags
-                    "mensshirtsindia", "casualshirtsindia", "formalshirtsindia",
-                    "shirtsformenindia", "mensshirtsstyle",
-
-                    // Specific Shirt Styles & Fits (Trending in Streetwear/Casual)
-                    "printedshirtsindia", "oversizedshirtsindia", "cubancollarindia",
-                    "flannelshirtsindia", "buttondownindia", "stripedshirtsindia",
-                    "corduroyshirtsindia", "halfshirtsindia"
+                    "oldmoneyshirts",     // Hits the exact core aesthetic you are targeting.
+                    "linenshirtsindia",   // Extremely high-signal for classic, smart-casual summer fits.
+                    "oxfordshirtsindia",  // The absolute staple for classic menswear and clean data.
+                    "poloshirtsindia",    // Specifically pulls in the collared knitwear/polo vibe you mentioned.
+                    "cubancollarindia"    // A refined, classic resort-wear style that completely avoids the basic tee look.
             ),
 
             "BOTTOMS", List.of(
-                    // Your originals
-                    "baggyjeansindia", "cargopantsindia", "parachutejeansindia",
-                    "widelegpantsindia", "jortsindia", "streetwearbottomsindia",
-
-                    // Jeans & Denim Additions
-                    "straightfitjeansindia", "flaredjeansindia", "bootcutjeansindia", "streetweardenimindia",
-
-                    // Casual, Sweats & Utility
-                    "utilitypantsindia", "sweatpantsindia", "joggersindia", "trackpantsindia",
-
-                    // Shorts & Alternatives
-                    "cargoshortsindia", "corduroypantsindia", "mensshortsindia"
+                    "baggyjeansindia",        // The absolute core product pushing streetwear commerce right now. Every brand is selling these.
+                    "joggersindia",             // Massive summer/monsoon trend. Highly specific to streetwear labels dropping new collections.
+                    "cargopantsindia",        // The staple utility piece; pulls in heavy D2C brand catalogs and drops.
+                    "widelegpantsindia",      // Captures the relaxed, flowy trousers and cords that brands are pivoting to outside of denim.
+                    "denimindia"    // The perfect anchor tag to ensure you are getting streetwear brands, avoiding generic mall-brand jeans.
             ),
 
             "ACCESSORIES", List.of(
-                    // Your originals
-                    "streetwearaccessoriesindia", "chainsindia", "ringsindia",
-                    "silverjewelryindia", "truckercapsindia", "beaniesindia",
-
-                    // Additions
-                    "mensjewelryindia", "totebagsindia", "pendantindia",
-                    "sunglassesindia", "mensaccessoriesindia", "y2kaccessoriesindia"
+                    "pendantsindia",        // High trend signal: Pulls in the exact Gen Z / streetwear aesthetic (chunky rings, futuristic shades)
+                    "capsindia",           // Extremely specific to streetwear headwear; guarantees the right vibe
+                    "jwelleryindia",           // Covers chains, pendants, and rings with much cleaner data than individual tags
+                    "vintagewatchesindia",
+                     "watchesindia",             // Brings in that premium, retro-styling element that pairs perfectly with streetwear
+                    "braceletsindia"  // Your core anchor to keep the scraper grounded in the niche
             ),
 
             "WATCHES", List.of(
@@ -119,13 +107,11 @@ public class InstagramExploreClient {
             ),
 
             "FRAGRANCES", List.of(
-                    // Your originals
-                    "nichefragrancesindia", "perfumeindia", "fragcommindia",
-                    "scentofthedayindia", "desifragranceaddicts",
-
-                    // Additions
-                    "fragranceindia", "attarindia", "indianperfumers",
-                    "perfumecollectionindia"
+                    "desifragranceaddicts",   // The biggest and most passionate Indian fragrance community; guarantees real user shots.
+                    "fragcommindia",          // The standard "Fragrance Community" tag; pulls high-quality, curated collector content.
+                    "scentofthedayindia",     // Essential for visual scrapers; people use this when pairing fragrances with their daily streetwear/fits.
+                    "nichefragrancesindia",   // Filters out the cheap clone spam and brings in premium, high-aesthetic photography.
+                    "perfumecollectionindia"  // High-signal tag that usually features clean, organized aesthetic shelf displays.
             )
     );
 

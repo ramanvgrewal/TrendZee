@@ -243,12 +243,22 @@ public class ProductEnrichmentService {
         return trend.getTrendName() == null ? "" : trend.getTrendName();
     }
 
-    /**
-     * Builds a marketplace-specific search query by appending a category-relevant
-     * suffix (e.g. "shoes" for SNEAKERS) so Amazon/Flipkart return relevant products.
-     */
     private String pickMarketplaceQuery(TrendSignal signal, Trend trend) {
         String base = pickQuery(signal, trend);
+        
+        // Use underdog title if available to be very specific
+        Trend.ProductDetail underdog = signal.getUnderdogProduct();
+        if (underdog != null && underdog.getTitle() != null && !underdog.getTitle().isBlank()) {
+            String[] words = underdog.getTitle().split("\\s+");
+            StringBuilder titleBase = new StringBuilder();
+            // Take the first 5-6 words to form a highly specific but valid search query
+            for (int i = 0; i < Math.min(words.length, 6); i++) {
+                if (i > 0) titleBase.append(" ");
+                titleBase.append(words[i]);
+            }
+            base = titleBase.toString().trim();
+        }
+
         String category = trend.getCategory();
         String suffix = category != null
                 ? CATEGORY_SEARCH_SUFFIX.getOrDefault(category.toUpperCase(), "")
@@ -292,13 +302,13 @@ public class ProductEnrichmentService {
             String title = extractText(firstTile, "h2 a span", "h2 span", "h2", "span.a-text-normal");
             if (title == null || title.isBlank()) return null;
 
-            Integer sellingPrice = parsePriceClean(extractText(firstTile,
+            Double sellingPrice = parsePriceClean(extractText(firstTile,
                     "span.a-price:not([data-a-strike]) span.a-offscreen",
                     "span.a-price-whole",
                     "span.a-price span.a-offscreen",
                     "span.a-color-price"));
 
-            Integer originalPrice = parsePriceClean(extractText(firstTile,
+            Double originalPrice = parsePriceClean(extractText(firstTile,
                     "span.a-price[data-a-strike] span.a-offscreen",
                     "span.a-text-price span.a-offscreen",
                     "span.a-text-price",
@@ -324,6 +334,11 @@ public class ProductEnrichmentService {
             try {
                 imgUrl = firstTile.locator("img.s-image").getAttribute("src");
                 if (imgUrl == null) imgUrl = firstTile.locator("img").first().getAttribute("src");
+                
+                // Enhance resolution: strip Amazon's sizing suffix (e.g. ._AC_UL320_.jpg -> .jpg)
+                if (imgUrl != null) {
+                    imgUrl = imgUrl.replaceAll("\\._[a-zA-Z0-9_-]+_(\\.[a-zA-Z]+)$", "$1");
+                }
             } catch (Exception ignored) {}
 
             return Trend.ProductDetail.builder()
@@ -382,6 +397,11 @@ public class ProductEnrichmentService {
                 if (img.count() > 0) {
                     imgUrl = safeAttr(img, "src");
                     if (imgUrl == null || imgUrl.isBlank()) imgUrl = safeAttr(img, "srcset");
+                    
+                    // Enhance resolution: change /image/612/612/ to /image/1080/1080/
+                    if (imgUrl != null) {
+                        imgUrl = imgUrl.replaceAll("/image/\\d+/\\d+/", "/image/1080/1080/");
+                    }
                 }
             } catch (Exception ignored) {}
 
@@ -394,10 +414,23 @@ public class ProductEnrichmentService {
                 } catch (Exception ignored) {}
             }
 
-            Integer sellingPrice = parsePriceClean(extractText(card,
-                    "div.Nx9bqj", ".Nx9bqj", "div._30jeq3", "._30jeq3", "[class*='Nx9bqj']"));
-            Integer originalPrice = parsePriceClean(extractText(card,
-                    "div.yRaY8j", ".yRaY8j", "div._3I9_wc", "._3I9_wc", "[class*='yRaY8j']"));
+            Double sellingPrice = parsePriceClean(extractText(card,
+                    "div.Nx9bqj", ".Nx9bqj", "div._30jeq3", "._30jeq3", "[class*='Nx9bqj']", "div.hl05eU", "div[class*='Price']"));
+            
+            if (sellingPrice == null) {
+                try {
+                    String text = card.innerText();
+                    if (text != null) {
+                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("₹\\s*([0-9,]+)").matcher(text);
+                        if (m.find()) {
+                            sellingPrice = parsePriceClean(m.group(1));
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            Double originalPrice = parsePriceClean(extractText(card,
+                    "div.yRaY8j", ".yRaY8j", "div._3I9_wc", "._3I9_wc", "[class*='yRaY8j']", "div[class*='OriginalPrice']"));
             if (originalPrice == null) originalPrice = sellingPrice;
 
             if ((title == null || title.isBlank()) && sellingPrice == null && link == null) return null;
@@ -486,12 +519,12 @@ public class ProductEnrichmentService {
         catch (Exception e) { return null; }
     }
 
-    private Integer parsePriceClean(String priceStr) {
+    private Double parsePriceClean(String priceStr) {
         if (priceStr == null || priceStr.isBlank()) return null;
         try {
-            String clean = priceStr.replaceAll("[^0-9]", "");
+            String clean = priceStr.replaceAll("[^0-9.]", "");
             if (clean.isEmpty()) return null;
-            return Integer.parseInt(clean);
+            return Double.parseDouble(clean);
         } catch (NumberFormatException e) { return null; }
     }
 }
