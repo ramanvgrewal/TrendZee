@@ -18,13 +18,15 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
     
     @Value("${app.frontend.redirectUri:http://localhost:5173/auth/callback}")
     private String frontendRedirectUri;
 
-    public OAuth2LoginSuccessHandler(JwtTokenProvider tokenProvider, UserRepository userRepository) {
+    public OAuth2LoginSuccessHandler(JwtTokenProvider tokenProvider, UserRepository userRepository, HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository) {
         this.tokenProvider = tokenProvider;
         this.userRepository = userRepository;
+        this.httpCookieOAuth2AuthorizationRequestRepository = httpCookieOAuth2AuthorizationRequestRepository;
     }
 
     @Override
@@ -50,6 +52,9 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
         // Generate JWT
         String token = tokenProvider.generateToken(email);
+
+        // Clear auth cookies
+        httpCookieOAuth2AuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
 
         // Redirect to frontend with token
         String targetUrl = UriComponentsBuilder.fromUriString(frontendRedirectUri)
