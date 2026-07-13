@@ -14,7 +14,10 @@ export const Route = createFileRoute("/aesthetic/$id")({
     let queryCategory = params.id;
     if (params.id === "upper") queryCategory = "shirts";
     else if (params.id === "gym") queryCategory = "sportswear";
-    const baseUrl = import.meta.env?.VITE_API_BASE_URL || (typeof process !== 'undefined' && process.env.VITE_API_BASE_URL) || (import.meta.env?.DEV ? "http://127.0.0.1:8080" : "");
+    let baseUrl = import.meta.env?.VITE_API_BASE_URL ?? (typeof process !== 'undefined' ? process.env.VITE_API_BASE_URL : undefined) ?? (import.meta.env?.DEV ? "http://127.0.0.1:8080" : "");
+    if (typeof window === 'undefined' && !baseUrl.startsWith('http')) {
+      baseUrl = "https://api.trendxee.com";
+    }
     try {
       const res = await fetch(`${baseUrl}/api/v2/trends?category=${queryCategory}&size=20`);
       let trends: Trend[] = [];

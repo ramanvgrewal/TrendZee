@@ -123,6 +123,9 @@ jobs:
             GROQ_MODEL=llama-3.3-70b-versatile
             LOG_LEVEL=INFO
             INGEST_AUTH_CODE=${{ secrets.INGEST_AUTH_CODE }}
+            FRONTEND_URL=https://trendxee.com
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
             ENVEOF
             
             # 🐳 3. Pull and run the images

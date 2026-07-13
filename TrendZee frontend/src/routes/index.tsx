@@ -8,7 +8,10 @@ import { aesthetics } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    const baseUrl = import.meta.env?.VITE_API_BASE_URL || (typeof process !== 'undefined' && process.env.VITE_API_BASE_URL) || (import.meta.env?.DEV ? "http://127.0.0.1:8080" : "");
+    let baseUrl = import.meta.env?.VITE_API_BASE_URL ?? (typeof process !== 'undefined' ? process.env.VITE_API_BASE_URL : undefined) ?? "http://127.0.0.1:8080";
+    if (typeof window === 'undefined' && !baseUrl.startsWith('http')) {
+      baseUrl = "https://api.trendxee.com";
+    }
     const rotationMap: Record<string, { brand: string; title: string; image: string }[]> = {};
     try {
       await Promise.all(
