@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.playwright.ElementHandle;
 import com.microsoft.playwright.Page;
+import com.trendzy.ingestion.scraper.util.ImageUtil;
 import com.trendzy.ingestion.scraper.util.PriceUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -150,6 +151,7 @@ public class GenericParser {
             if (originalPrice == null) originalPrice = price;
         }
 
+        imageUrl = ImageUtil.getHighResUrl(imageUrl);
         products.add(RawProduct.builder()
                 .productName(title)
                 .mainPrice(price)
@@ -617,9 +619,12 @@ public class GenericParser {
         }
 
         if (url.startsWith("data:image")) return null;
-        if (url.startsWith("//")) return "https:" + url;
-        if (url.startsWith("/")) return baseUrl.replaceAll("/+$", "") + url;
-        return url;
+        
+        String resolved = url;
+        if (resolved.startsWith("//")) resolved = "https:" + resolved;
+        else if (resolved.startsWith("/")) resolved = baseUrl.replaceAll("/+$", "") + resolved;
+        
+        return ImageUtil.getHighResUrl(resolved);
     }
 
     private String resolveUrl(String href, String baseUrl) {

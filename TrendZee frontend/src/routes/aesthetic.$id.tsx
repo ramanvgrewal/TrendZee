@@ -19,7 +19,7 @@ export const Route = createFileRoute("/aesthetic/$id")({
       baseUrl = "https://api.trendxee.com";
     }
     try {
-      const res = await fetch(`${baseUrl}/api/v2/trends?category=${queryCategory}&size=20`);
+      const res = await fetch(`${baseUrl}/api/v2/trends?category=${queryCategory}&size=100`);
       let trends: Trend[] = [];
       if (res.ok) {
         const data = await res.json();

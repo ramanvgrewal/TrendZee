@@ -35,7 +35,7 @@ public class InstagramExploreClient {
     private static final String SEARCH_URL_TMPL   = "https://www.instagram.com/explore/tags/%s/";
     private static final String USER_AGENT        =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+                    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
     private static final int DOM_SETTLE_TIMEOUT   = 15_000;
     private static final int POST_PAGE_TIMEOUT    = 8_000;
     private static final int SCROLL_COUNT_PER_TAG = 4;
@@ -45,12 +45,13 @@ public class InstagramExploreClient {
     // ── Category → Tag Mapping (keys match Category enum) ────────────────────
     private static final Map<String, List<String>> SECTION_TAGS = Map.of(
             "STREETWEAR", List.of(
-                    "streetwearindia",    // Your clean local streetwear anchor
-                    "homegrownstreetwear",          // The global tag: massive volume, very high-quality aesthetic fits
-                    "vintagefootball",    // Brings in super clean retro jersey and tee styling
-                    "oversizedteesindia", // Keeps the focus on the actual product fit
-                    "hgstreet",
-                    "jerseycultureindia"    // Highly curated homegrown Indian streetwear community
+                    "streetwearbrands",    // Your clean local streetwear anchor
+                    "oversizedteesindia",          // The global tag: massive volume, very high-quality aesthetic fits
+                    "animewear",
+                    "streetwearindia",    // Brings in super clean retro jersey and tee styling
+                    "marvelclothing", // Keeps the focus on the actual product fit
+                    "hoodieclothing" ,
+                    "animeclothing"       // Highly curated homegrown Indian streetwear community
             ),
 
             "SPORTSWEAR", List.of(
@@ -116,8 +117,8 @@ public class InstagramExploreClient {
     );
 
     // ── URL Patterns ─────────────────────────────────────────────────────────
-    private static final Pattern POST_OR_REEL_PATTERN =
-            Pattern.compile("https://www\\.instagram\\.com/(p|reel)/[A-Za-z0-9_-]+/?");
+    private static final Pattern POST_PATTERN =
+            Pattern.compile("https://www\\.instagram\\.com/p/[A-Za-z0-9_-]+/?");
 
     // ── Caption Extraction Patterns ──────────────────────────────────────────
     /**
@@ -187,7 +188,7 @@ public class InstagramExploreClient {
 
         Set<String> postUrls = null;
         try (Browser browser = playwright.chromium()
-                .launch(new BrowserType.LaunchOptions().setHeadless(true))) {
+                .launch(new BrowserType.LaunchOptions().setHeadless(false))) {
             BrowserContext ctx = createContext(browser);
             postUrls = new LinkedHashSet<>();
             Page tagPage = ctx.newPage();
@@ -201,7 +202,8 @@ public class InstagramExploreClient {
             for (String tag : tags) {
                 if (postUrls.size() >= MIN_POSTS_TOTAL) break;
                 collectFromTagUrl(tagPage, String.format(SEARCH_URL_TMPL, tag), postUrls);
-                RandomDelayUtil.delay();
+                // Moderate delay between tag searches
+                RandomDelayUtil.delay(4000, 7000, "tag-to-tag delay");
             }
             tagPage.close();
             log.info("[EXPLORE-V2] Phase 1 done — {} post URLs collected", postUrls.size());
@@ -228,8 +230,13 @@ public class InstagramExploreClient {
                 return signals;
             }
 
+            log.info("[EXPLORE-V2] Brief pause before signal extraction...");
+            RandomDelayUtil.delay(5000, 8000, "phase-1-to-phase-2-pause");
+
             Page signalPage = ctx.newPage();
-            installResourceBlocker(signalPage);
+            // Temporarily disable the resource blocker. Instagram's anti-bot algorithms
+            // often instantly 429 pages that block CSS/font/image requests.
+            // installResourceBlocker(signalPage);
 
             int processed = 0, total = freshUrls.size();
             for (String postUrl : freshUrls) {
@@ -258,10 +265,10 @@ public class InstagramExploreClient {
                     log.warn("[EXPLORE-V2] Error on {}: {}", postUrl, e.getMessage());
                 }
                 
-                // Increase delays significantly to avoid 429 blocks
-                RandomDelayUtil.delay(3000, 6000, "post-to-post delay");
+                // Moderate delays to balance speed and rate limit safety
+                RandomDelayUtil.delay(4000, 8000, "post-to-post delay");
                 if (processed % 5 == 0 && processed < total) {
-                    RandomDelayUtil.delay(10_000, 15_000, "v2-rate-limit-pause");
+                    RandomDelayUtil.delay(15_000, 20_000, "v2-rate-limit-pause");
                 }
             }
             signalPage.close();
@@ -284,7 +291,9 @@ public class InstagramExploreClient {
         // ── Navigate ──────────────────────────────────────────────────────────
         Response response = null;
         try {
-            response = page.navigate(postUrl, new Page.NavigateOptions().setTimeout(POST_PAGE_TIMEOUT));
+            response = page.navigate(postUrl, new Page.NavigateOptions()
+                    .setReferer("https://www.instagram.com/")
+                    .setTimeout(POST_PAGE_TIMEOUT));
         } catch (TimeoutError te) {
             log.warn("[EXPLORE-V2] Navigation timeout for: {}", postUrl);
         }
@@ -777,7 +786,7 @@ public class InstagramExploreClient {
                 log.debug("[EXPLORE] Scroll {}/{} on {}", i + 1, SCROLL_COUNT_PER_TAG, url);
             }
 
-            List<ElementHandle> anchors = page.querySelectorAll("a[href*='/p/'], a[href*='/reel/']");
+            List<ElementHandle> anchors = page.querySelectorAll("a[href*='/p/']");
             log.debug("[EXPLORE] Found {} anchor elements on {}", anchors.size(), url);
 
             int collected = 0;
@@ -790,7 +799,7 @@ public class InstagramExploreClient {
                             ? href : "https://www.instagram.com" + href;
                     if (!full.endsWith("/")) full += "/";
                     String clean = full.split("\\?")[0];
-                    if (POST_OR_REEL_PATTERN.matcher(clean).matches() && accumulator.add(clean)) {
+                    if (POST_PATTERN.matcher(clean).matches() && accumulator.add(clean)) {
                         collected++;
                     }
                 } catch (Exception e) {

@@ -30,12 +30,12 @@ import java.nio.file.Paths;
 public class InstagramSessionManager {
 
     private static final String SESSION_FILE_NAME  = "instagram_session.json";
-    private static final long   LOGIN_TIMEOUT_MS   = 120_000L;
+    private static final long   LOGIN_TIMEOUT_MS   = 180_000L;
     private static final String INSTAGRAM_LOGIN    = "https://www.instagram.com/accounts/login/";
     private static final String USER_AGENT         =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
                     "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                    "Chrome/120.0.0.0 Safari/537.36";
+                    "Chrome/126.0.0.0 Safari/537.36";
 
     @Value("${scraper.instagram.session-dir:${user.home}/.trendzy}")
     private String sessionDir;
@@ -142,7 +142,10 @@ public class InstagramSessionManager {
             try {
                 page.waitForURL(
                         url -> !url.contains("/accounts/login")
-                                && !url.contains("/accounts/emailsignup"),
+                                && !url.contains("/accounts/emailsignup")
+                                && !url.contains("/auth_platform/")
+                                && !url.contains("/challenge/")
+                                && !url.contains("/two_step_verification"),
                         new Page.WaitForURLOptions().setTimeout(LOGIN_TIMEOUT_MS));
 
                 log.info("[SESSION] Login detected at: {}", page.url());

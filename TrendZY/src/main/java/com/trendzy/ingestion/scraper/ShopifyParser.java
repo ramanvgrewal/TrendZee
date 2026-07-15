@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.playwright.ElementHandle;
 import com.microsoft.playwright.Page;
+import com.trendzy.ingestion.scraper.util.ImageUtil;
 import com.trendzy.ingestion.scraper.util.PriceUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -220,6 +221,7 @@ public class ShopifyParser {
             }
         }
 
+        imageUrl = ImageUtil.getHighResUrl(imageUrl);
         products.add(RawProduct.builder()
                 .productName(title).mainPrice(price).originalPrice(originalPrice)
                 .currency(currency).productUrl(url).imageUrl(imageUrl).build());
@@ -263,6 +265,7 @@ public class ShopifyParser {
             imageUrl = images.get(0).path("src").asText(null);
         }
 
+        imageUrl = ImageUtil.getHighResUrl(imageUrl);
         return RawProduct.builder()
                 .productName(title)
                 .mainPrice(mainPrice)
@@ -359,8 +362,10 @@ public class ShopifyParser {
                             imageUrl = srcset.split(",")[0].trim().split("\\s+")[0];
                         }
                     }
-                    if (imageUrl != null && imageUrl.startsWith("//")) imageUrl = "https:" + imageUrl;
+                if (imageUrl != null && imageUrl.startsWith("//")) imageUrl = "https:" + imageUrl;
                 }
+
+                imageUrl = ImageUtil.getHighResUrl(imageUrl);
 
                 results.add(RawProduct.builder()
                         .productName(title)
